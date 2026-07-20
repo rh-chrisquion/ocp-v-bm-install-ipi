@@ -1,14 +1,30 @@
 # OCP-V 4.20 bare-metal Ansible scaffold (HPE Gen11)
 
-This Ansible scaffold generates `install-config.yaml` and `agent-config.yaml` for a 5-node OpenShift 4.20 bare-metal deployment where all nodes are both control plane and schedulable compute.
+This project automates two parts of an OpenShift 4.20 bare-metal agent install workflow:
 
-The network model is inventory-driven and expects three separate LACP (802.3ad) bonds per node:
+1. Generate `install-config.yaml` and `agent-config.yaml`
+2. Optionally publish and serve the generated agent ISO to bare-metal hosts
+
+The current model is a 5-node deployment where all nodes are control-plane and schedulable compute.
+
+## Current playbook behavior
+
+`site.yml` contains two plays:
+
+- `ocp_v420_baremetal` on `localhost`: always runs and generates manifests
+- `ocp_v420_baremetal_image_server` on `image_server`: runs only when `ocp_agent_image_publish_enabled=true`
+
+The image-server play requires privilege escalation (`become: true`) because it writes to `/var/lib` and installs a `systemd` unit.
+
+## Network model
+
+The network model is inventory-driven and expects three LACP (802.3ad) bonds per node:
 
 - OCP data plane bond
 - Storage bond
 - UDP multicast bond
 
-Each bond is defined by:
+Each bond defines:
 
 - Bond name
 - Two physical NIC members
@@ -16,67 +32,79 @@ Each bond is defined by:
 - Optional gateway/default route
 - Optional DNS servers
 
-## Layout
+## Repository layout
 
 - `site.yml`: entry playbook
+- `inventories/lab/hosts.yml`: inventory (includes `image_server` group)
 - `inventories/lab/group_vars/all.yml`: all configurable values
-- `roles/ocp_v420_baremetal/templates/install-config.yaml.j2`: installer config template
-- `roles/ocp_v420_baremetal/templates/agent-config.yaml.j2`: host/bond network template
-- `roles/ocp_v420_baremetal_image_server`: publishes generated ISO over HTTP for bare-metal hosts
+- `roles/ocp_v420_baremetal`: manifest generation role
+- `roles/ocp_v420_baremetal_image_server`: ISO publishing + HTTP service role
 
-## Configure
+## Inventory configuration
 
-Edit `inventories/lab/group_vars/all.yml`:
+Update `inventories/lab/group_vars/all.yml`:
 
 - Cluster metadata (`ocp_cluster_name`, `ocp_base_domain`)
 - Credentials (`ocp_pull_secret`, `ocp_ssh_public_key`)
 - VIPs (`ocp_api_vip`, `ocp_ingress_vip`)
-- Network CIDRs
-- Bond definitions under `ocp_network_bonds`
+- Network CIDRs and `ocp_network_bonds`
 - Node inventory under `ocp_nodes` (BMC, boot MAC, root device hint, per-bond IPs)
-- `image_server` host in `inventories/lab/hosts.yml` (the machine that will host the ISO)
-- Image publishing settings (`ocp_agent_image_*`)
+- Image publishing variables (`ocp_agent_image_*`)
 
-## Generate manifests
+Update `inventories/lab/hosts.yml`:
+
+- Set the `image_server` host to the provisioning machine that will serve the ISO
+- Ensure Ansible can connect to that host and escalate privileges
+
+## End-to-end workflow
+
+From the project directory:
 
 ```bash
 cd ocp-v420-baremetal-ansible
+```
+
+### 1) Generate manifests
+
+```bash
 ansible-playbook site.yml
 ```
 
-Generated output:
+Expected output files:
 
 - `build/install-config.yaml`
 - `build/agent-config.yaml`
 
-## Build an agent-based install image
-
-After generation, run OpenShift installer from this same directory:
+### 2) Build the agent ISO
 
 ```bash
 openshift-install agent create image --dir build
 ```
 
-Use the resulting ISO to boot each HPE Gen11 node.
+### 3) Publish and serve the ISO
 
-## Publish the generated image for bare-metal nodes
-
-Set these values in `inventories/lab/group_vars/all.yml`:
-
-- `ocp_agent_image_publish_enabled: true`
-- `ocp_agent_image_url_host`: IP or FQDN of the provisioning host reachable by bare-metal nodes
-- Optional: `ocp_agent_image_server_port`, `ocp_agent_image_publish_dir`, `ocp_agent_image_publish_filename`
-
-Run the playbook again to publish and serve the ISO:
+Set `ocp_agent_image_publish_enabled: true` and set `ocp_agent_image_url_host` to an IP/FQDN reachable by bare-metal hosts, then run:
 
 ```bash
 ansible-playbook site.yml -e ocp_agent_image_publish_enabled=true
 ```
 
-The role will:
+The image-server role will:
 
-- Find the newest `*.iso` in `ocp_agent_image_source_dir` (defaults to `build/`)
-- Copy it into the publish directory
-- Install and start a systemd service (`ocp-agent-image-server`) using `python3 -m http.server`
-- Print the final URL for node boot media configuration
+- Locate the newest `*.iso` in `ocp_agent_image_source_dir` (default: `./build`)
+- Copy it to `ocp_agent_image_publish_dir` (default: `/var/lib/ocp-agent-image`)
+- Install and start `ocp-agent-image-server` (`python3 -m http.server`)
+- Print the final boot URL for node media configuration
+
+## Image publishing variables
+
+Common variables in `inventories/lab/group_vars/all.yml`:
+
+- `ocp_agent_image_publish_enabled` (default: `false`)
+- `ocp_agent_image_source_dir` (default: `{{ ocp_install_dir }}`)
+- `ocp_agent_image_glob` (default: `*.iso`)
+- `ocp_agent_image_publish_dir` (default: `/var/lib/ocp-agent-image`)
+- `ocp_agent_image_publish_filename` (optional override)
+- `ocp_agent_image_server_port` (default: `8080`)
+- `ocp_agent_image_url_host` (must be reachable by bare-metal hosts)
 

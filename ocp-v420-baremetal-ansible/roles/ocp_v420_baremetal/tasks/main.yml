@@ -1,0 +1,63 @@
+- name: Validate required inventory variables
+  ansible.builtin.assert:
+    that:
+      - ocp_cluster_name is defined
+      - ocp_base_domain is defined
+      - ocp_pull_secret is defined
+      - ocp_ssh_public_key is defined
+      - ocp_api_vip is defined
+      - ocp_ingress_vip is defined
+      - ocp_nodes is defined
+      - ocp_nodes | length > 0
+      - ocp_network_bonds is defined
+      - "'data' in ocp_network_bonds"
+      - "'storage' in ocp_network_bonds"
+      - "'multicast' in ocp_network_bonds"
+    fail_msg: Required OCP inventory variables are missing. Update inventories/*/group_vars/all.yml.
+
+- name: Validate node count aligns to replica shape
+  ansible.builtin.assert:
+    that:
+      - (ocp_control_plane_replicas | int) + (ocp_worker_replicas | int) == (ocp_nodes | length)
+    fail_msg: Number of ocp_nodes must equal control plane + worker replicas.
+
+- name: Validate each node has required networking and identity values
+  ansible.builtin.assert:
+    that:
+      - node.hostname is defined
+      - node.role is defined
+      - node.boot_mac_address is defined
+      - node.bond_ipv4 is defined
+      - node.bond_ipv4.data is defined
+      - node.bond_ipv4.storage is defined
+      - node.bond_ipv4.multicast is defined
+    fail_msg: "Node {{ node.hostname | default('unknown') }} is missing required values."
+  loop: "{{ ocp_nodes }}"
+  loop_control:
+    loop_var: node
+    label: "{{ node.hostname | default('unknown') }}"
+
+- name: Ensure generated manifest output directory exists
+  ansible.builtin.file:
+    path: "{{ ocp_output_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: Generate install-config.yaml
+  ansible.builtin.template:
+    src: install-config.yaml.j2
+    dest: "{{ ocp_output_dir }}/install-config.yaml"
+    mode: "0640"
+
+- name: Generate agent-config.yaml
+  ansible.builtin.template:
+    src: agent-config.yaml.j2
+    dest: "{{ ocp_output_dir }}/agent-config.yaml"
+    mode: "0640"
+
+- name: Show generated artifact locations
+  ansible.builtin.debug:
+    msg:
+      - "Generated {{ ocp_output_dir }}/install-config.yaml"
+      - "Generated {{ ocp_output_dir }}/agent-config.yaml"
+

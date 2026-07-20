@@ -1,0 +1,151 @@
+# Core cluster metadata
+ocp_cluster_name: ocpv420
+ocp_base_domain: lab.example.com
+ocp_openshift_version: "4.20"
+ocp_release_image: quay.io/openshift-release-dev/ocp-release:4.20.0-x86_64
+ocp_install_dir: ./build
+
+# Generated agent image publishing (for bare-metal boot)
+ocp_agent_image_publish_enabled: false
+ocp_agent_image_source_dir: "{{ ocp_install_dir }}"
+ocp_agent_image_glob: "*.iso"
+ocp_agent_image_publish_dir: /var/lib/ocp-agent-image
+ocp_agent_image_publish_filename: agent.x86_64.iso
+ocp_agent_image_server_port: 8080
+# Set this to the provisioning host IP/FQDN reachable by bare-metal nodes.
+ocp_agent_image_url_host: provisioner.lab.example.com
+
+# Credentials and access
+ocp_pull_secret: '{"auths":{"cloud.openshift.com":{"auth":"<replace-with-auth-token>","email":"admin@example.com"}}}'
+ocp_ssh_public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDreplace_this_key"
+
+# API and ingress virtual IPs (same L2 as data bond)
+ocp_api_vip: 10.20.10.10
+ocp_ingress_vip: 10.20.10.9
+
+# OCP networking
+ocp_machine_network_cidr: 10.20.10.0/24
+ocp_cluster_networks:
+  - cidr: 10.128.0.0/14
+    host_prefix: 23
+ocp_service_networks:
+  - 172.30.0.0/16
+
+# Bare-metal install model:
+# - 5 nodes, each node is a master and also schedulable for workloads
+ocp_control_plane_replicas: 5
+ocp_worker_replicas: 0
+ocp_schedulable_masters: true
+
+# Hardware profile
+ocp_hardware_vendor: HPE
+ocp_hardware_model: ProLiant Gen11
+ocp_bmc_protocol: redfish-virtualmedia
+
+# All bond and network characteristics are inventory-driven.
+# Each network uses one 802.3ad bond (2 NICs).
+ocp_network_bonds:
+  data:
+    bond_name: bond_data
+    members:
+      - ens2f0np0
+      - ens2f1np1
+    mtu: 9000
+    network_cidr: 10.20.10.0/24
+    gateway: 10.20.10.1
+    default_route: true
+    dns_servers:
+      - 10.20.10.53
+      - 10.20.10.54
+  storage:
+    bond_name: bond_storage
+    members:
+      - ens3f0np0
+      - ens3f1np1
+    mtu: 9000
+    network_cidr: 10.30.10.0/24
+    gateway: null
+    default_route: false
+    dns_servers: []
+  multicast:
+    bond_name: bond_multicast
+    members:
+      - ens4f0np0
+      - ens4f1np1
+    mtu: 9000
+    network_cidr: 10.40.10.0/24
+    gateway: null
+    default_route: false
+    dns_servers: []
+
+ocp_ntp_sources:
+  - pool.ntp.org
+
+# Five nodes, all role=master (control + compute).
+# Update BMC credentials, MAC addresses, and IP allocations per server.
+ocp_nodes:
+  - hostname: ocp-gen11-01
+    role: master
+    bmc_address: "redfish-virtualmedia://192.168.100.101/redfish/v1/Systems/1"
+    bmc_username: root
+    bmc_password: changeme
+    boot_mac_address: "00:11:22:33:44:51"
+    root_device_hints:
+      deviceName: /dev/nvme0n1
+    bond_ipv4:
+      data: 10.20.10.11/24
+      storage: 10.30.10.11/24
+      multicast: 10.40.10.11/24
+
+  - hostname: ocp-gen11-02
+    role: master
+    bmc_address: "redfish-virtualmedia://192.168.100.102/redfish/v1/Systems/1"
+    bmc_username: root
+    bmc_password: changeme
+    boot_mac_address: "00:11:22:33:44:52"
+    root_device_hints:
+      deviceName: /dev/nvme0n1
+    bond_ipv4:
+      data: 10.20.10.12/24
+      storage: 10.30.10.12/24
+      multicast: 10.40.10.12/24
+
+  - hostname: ocp-gen11-03
+    role: master
+    bmc_address: "redfish-virtualmedia://192.168.100.103/redfish/v1/Systems/1"
+    bmc_username: root
+    bmc_password: changeme
+    boot_mac_address: "00:11:22:33:44:53"
+    root_device_hints:
+      deviceName: /dev/nvme0n1
+    bond_ipv4:
+      data: 10.20.10.13/24
+      storage: 10.30.10.13/24
+      multicast: 10.40.10.13/24
+
+  - hostname: ocp-gen11-04
+    role: master
+    bmc_address: "redfish-virtualmedia://192.168.100.104/redfish/v1/Systems/1"
+    bmc_username: root
+    bmc_password: changeme
+    boot_mac_address: "00:11:22:33:44:54"
+    root_device_hints:
+      deviceName: /dev/nvme0n1
+    bond_ipv4:
+      data: 10.20.10.14/24
+      storage: 10.30.10.14/24
+      multicast: 10.40.10.14/24
+
+  - hostname: ocp-gen11-05
+    role: master
+    bmc_address: "redfish-virtualmedia://192.168.100.105/redfish/v1/Systems/1"
+    bmc_username: root
+    bmc_password: changeme
+    boot_mac_address: "00:11:22:33:44:55"
+    root_device_hints:
+      deviceName: /dev/nvme0n1
+    bond_ipv4:
+      data: 10.20.10.15/24
+      storage: 10.30.10.15/24
+      multicast: 10.40.10.15/24
+

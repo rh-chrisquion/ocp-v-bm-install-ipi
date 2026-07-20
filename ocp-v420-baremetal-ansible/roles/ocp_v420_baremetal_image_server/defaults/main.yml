@@ -1,0 +1,14 @@
+ocp_agent_image_publish_enabled: false
+ocp_agent_image_source_dir: "{{ ocp_install_dir | default('./build') }}"
+ocp_agent_image_glob: "*.iso"
+ocp_agent_image_publish_dir: "/var/lib/ocp-agent-image"
+ocp_agent_image_publish_filename: ""
+
+ocp_agent_image_server_service_name: ocp-agent-image-server
+ocp_agent_image_server_bind: "0.0.0.0"
+ocp_agent_image_server_port: 8080
+ocp_agent_image_server_user: root
+ocp_agent_image_server_group: root
+
+# Set this to an IP or FQDN that the bare-metal hosts can reach.
+ocp_agent_image_url_host: "{{ ansible_host | default(inventory_hostname) }}"

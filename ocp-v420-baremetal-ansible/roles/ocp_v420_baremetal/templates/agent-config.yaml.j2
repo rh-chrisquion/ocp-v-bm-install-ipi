@@ -1,0 +1,74 @@
+apiVersion: v1alpha1
+kind: AgentConfig
+metadata:
+  name: {{ ocp_cluster_name }}
+rendezvousIP: {{ (ocp_nodes | first).bond_ipv4['data'].split('/')[0] }}
+hosts:
+{% for node in ocp_nodes %}
+  - hostname: {{ node.hostname }}
+    role: {{ node.role }}
+    interfaces:
+      - name: {{ node.boot_interface_name | default(ocp_network_bonds['data'].members[0]) }}
+        macAddress: {{ node.boot_mac_address }}
+{% if node.root_device_hints is defined %}
+    rootDeviceHints:
+{% for hint_key, hint_value in node.root_device_hints.items() %}
+      {{ hint_key }}: {{ hint_value }}
+{% endfor %}
+{% endif %}
+    networkConfig:
+      interfaces:
+{% for bond_name, bond in ocp_network_bonds.items() %}
+        - name: {{ bond.bond_name }}
+          type: bond
+          state: up
+          mtu: {{ bond.mtu }}
+          ipv4:
+            enabled: true
+            dhcp: false
+            address:
+              - ip: {{ node.bond_ipv4[bond_name].split('/')[0] }}
+                prefix-length: {{ node.bond_ipv4[bond_name].split('/')[1] }}
+          link-aggregation:
+            mode: 802.3ad
+            options:
+              miimon: "100"
+              lacp_rate: fast
+              xmit_hash_policy: layer3+4
+            port:
+{% for member in bond.members %}
+              - {{ member }}
+{% endfor %}
+{% endfor %}
+      dns-resolver:
+        config:
+{% set dns_servers = ocp_network_bonds['data'].dns_servers | default([]) %}
+{% if dns_servers | length > 0 %}
+          server:
+{% for dns in dns_servers %}
+            - {{ dns }}
+{% endfor %}
+{% else %}
+          server: []
+{% endif %}
+{% set default_route_bonds = ocp_network_bonds | dict2items | selectattr('value.default_route', 'defined') | selectattr('value.default_route') | list %}
+      routes:
+{% if default_route_bonds | length > 0 %}
+        config:
+{% for bond_name, bond in ocp_network_bonds.items() %}
+{% if bond.default_route | bool and bond.gateway is not none %}
+          - destination: 0.0.0.0/0
+            next-hop-address: {{ bond.gateway }}
+            next-hop-interface: {{ bond.bond_name }}
+            table-id: 254
+{% endif %}
+{% endfor %}
+{% else %}
+        config: []
+{% endif %}
+{% endfor %}
+additionalNTPSources:
+{% for ntp in ocp_ntp_sources %}
+  - {{ ntp }}
+{% endfor %}
+

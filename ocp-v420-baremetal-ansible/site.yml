@@ -1,0 +1,14 @@
+- name: Build OCP-V 4.20 bare-metal install manifests
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - role: ocp_v420_baremetal
+
+- name: Publish generated OCP agent image for bare-metal hosts
+  hosts: image_server
+  gather_facts: false
+  become: true
+  roles:
+    - role: ocp_v420_baremetal_image_server
+      when: ocp_agent_image_publish_enabled | default(false) | bool
+

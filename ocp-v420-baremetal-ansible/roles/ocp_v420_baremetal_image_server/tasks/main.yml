@@ -1,0 +1,99 @@
+- name: Validate image server configuration
+  ansible.builtin.assert:
+    that:
+      - ocp_agent_image_source_dir is defined
+      - ocp_agent_image_publish_dir is defined
+      - ocp_agent_image_server_port | int > 0
+      - ocp_agent_image_server_port | int < 65536
+    fail_msg: OCP agent image server variables are invalid. Review inventories/*/group_vars/all.yml.
+
+- name: Verify Python 3 is available for HTTP serving
+  ansible.builtin.command: python3 --version
+  changed_when: false
+
+- name: Resolve generated image source path
+  ansible.builtin.set_fact:
+    ocp_agent_image_source_dir_resolved: >-
+      {{
+        ocp_agent_image_source_dir
+        if ocp_agent_image_source_dir.startswith('/')
+        else (playbook_dir ~ '/' ~ ocp_agent_image_source_dir)
+      }}
+
+- name: Validate generated image source directory exists
+  ansible.builtin.stat:
+    path: "{{ ocp_agent_image_source_dir_resolved }}"
+  register: ocp_agent_image_source_dir_stat
+
+- name: Fail when generated image source directory is missing
+  ansible.builtin.assert:
+    that:
+      - ocp_agent_image_source_dir_stat.stat.isdir | default(false)
+    fail_msg: >-
+      Source directory {{ ocp_agent_image_source_dir_resolved }} does not exist.
+      Run this role from the repository playbook directory or set ocp_agent_image_source_dir to an absolute path.
+
+- name: Locate generated OCP agent image
+  ansible.builtin.find:
+    paths: "{{ ocp_agent_image_source_dir_resolved }}"
+    patterns: "{{ ocp_agent_image_glob }}"
+    recurse: false
+    file_type: file
+  register: ocp_agent_image_candidates
+
+- name: Fail when no generated OCP agent image exists
+  ansible.builtin.assert:
+    that:
+      - ocp_agent_image_candidates.files | length > 0
+    fail_msg: >-
+      No image matched {{ ocp_agent_image_glob }} in {{ ocp_agent_image_source_dir_resolved }}.
+      Run 'openshift-install agent create image --dir {{ ocp_agent_image_source_dir_resolved }}' first.
+
+- name: Select latest generated OCP agent image
+  ansible.builtin.set_fact:
+    ocp_agent_image_selected: "{{ (ocp_agent_image_candidates.files | sort(attribute='mtime', reverse=true))[0] }}"
+
+- name: Derive published image filename
+  ansible.builtin.set_fact:
+    ocp_agent_image_effective_filename: >-
+      {{
+        ocp_agent_image_publish_filename
+        if (ocp_agent_image_publish_filename | trim | length > 0)
+        else (ocp_agent_image_selected.path | basename)
+      }}
+
+- name: Ensure publish directory exists
+  ansible.builtin.file:
+    path: "{{ ocp_agent_image_publish_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy generated OCP agent image into publish directory
+  ansible.builtin.copy:
+    src: "{{ ocp_agent_image_selected.path }}"
+    dest: "{{ ocp_agent_image_publish_dir }}/{{ ocp_agent_image_effective_filename }}"
+    mode: "0644"
+    remote_src: true
+  notify: Restart OCP agent image server
+
+- name: Install systemd unit for OCP agent image server
+  ansible.builtin.template:
+    src: ocp-agent-image-server.service.j2
+    dest: "/etc/systemd/system/{{ ocp_agent_image_server_service_name }}.service"
+    mode: "0644"
+  notify: Restart OCP agent image server
+
+- name: Flush handlers before service enablement
+  ansible.builtin.meta: flush_handlers
+
+- name: Ensure OCP agent image server is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ ocp_agent_image_server_service_name }}"
+    enabled: true
+    state: started
+
+- name: Show bare-metal boot image URL
+  ansible.builtin.debug:
+    msg: >-
+      Bare-metal nodes can boot from
+      http://{{ ocp_agent_image_url_host }}:{{ ocp_agent_image_server_port }}/{{ ocp_agent_image_effective_filename }}

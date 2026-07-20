@@ -1,0 +1,5 @@
+- name: Restart OCP agent image server
+  ansible.builtin.systemd:
+    name: "{{ ocp_agent_image_server_service_name }}"
+    daemon_reload: true
+    state: restarted

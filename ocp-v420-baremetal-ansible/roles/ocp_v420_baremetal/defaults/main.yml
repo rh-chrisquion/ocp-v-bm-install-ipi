@@ -1,0 +1,2 @@
+ocp_output_dir: "{{ ocp_install_dir | default('./build') }}"
+

@@ -1,0 +1,34 @@
+apiVersion: v1
+baseDomain: {{ ocp_base_domain }}
+metadata:
+  name: {{ ocp_cluster_name }}
+compute:
+  - name: worker
+    replicas: {{ ocp_worker_replicas }}
+controlPlane:
+  name: master
+  replicas: {{ ocp_control_plane_replicas }}
+mastersSchedulable: {{ (ocp_schedulable_masters | bool) | ternary('true', 'false') }}
+networking:
+  networkType: OVNKubernetes
+  machineNetwork:
+    - cidr: {{ ocp_machine_network_cidr }}
+  clusterNetwork:
+{% for network in ocp_cluster_networks %}
+    - cidr: {{ network.cidr }}
+      hostPrefix: {{ network.host_prefix }}
+{% endfor %}
+  serviceNetwork:
+{% for service_network in ocp_service_networks %}
+    - {{ service_network }}
+{% endfor %}
+platform:
+  baremetal:
+    apiVIPs:
+      - {{ ocp_api_vip }}
+    ingressVIPs:
+      - {{ ocp_ingress_vip }}
+publish: External
+pullSecret: '{{ ocp_pull_secret | replace("'", "''") }}'
+sshKey: '{{ ocp_ssh_public_key }}'
+

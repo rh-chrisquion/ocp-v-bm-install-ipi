@@ -1,0 +1,16 @@
+[Unit]
+Description=Serve generated OpenShift agent image
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ ocp_agent_image_server_user }}
+Group={{ ocp_agent_image_server_group }}
+WorkingDirectory={{ ocp_agent_image_publish_dir }}
+ExecStart=/usr/bin/env python3 -m http.server {{ ocp_agent_image_server_port }} --bind {{ ocp_agent_image_server_bind }} --directory {{ ocp_agent_image_publish_dir }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

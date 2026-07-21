@@ -1,0 +1,39 @@
+---
+description: OpenShift GitOps repository conventions and guardrails
+alwaysApply: true
+---
+
+# OpenShift GitOps Context
+
+## Repository intent
+
+- Treat the repository as the source of truth for OpenShift GitOps configuration.
+- Preserve strict, schema-validated directory structure; avoid ad-hoc folders or file sprawl.
+- Review architecture decisions in `docs/adr/` before proposing structural changes.
+
+## Structure and deployment model
+
+- `sources/<app-name>` is the primary deployment unit and must remain valid Argo CD source content.
+- Organize configuration by application, not by delivery tool.
+- Reuse the same `sources/<app-name>` for Argo CD, bootstrap Ansible, RHACM, and other delivery paths.
+- `clusters/<clusterName>/<app>.yaml` gate files control where apps deploy and may include intentional Argo CD overrides.
+- Keep default behavior in app-of-apps templates; use gate files for explicit deviations only.
+
+## Governance model
+
+- Every generated application belongs to an Argo CD AppProject.
+- Every AppProject is owned by one or more LDAP-backed teams.
+- Reflect team roles as OpenShift access levels: admins -> `admin`, developers -> `edit`, viewers -> `view`.
+- Keep naming and ownership consistent with cluster, project, and app boundaries.
+
+## Cluster and profile conventions
+
+- Prefer cluster naming pattern `<dc>-<type>-<env>-<n>` unless explicitly using approved lab/personal exceptions.
+- Model each cluster with exactly one cluster-type profile composed from reusable app-groups.
+- Keep data-center, cluster-type, and environment metadata consistent for RHACM label-driven policy placement.
+
+## Tooling conventions
+
+- Use `oc` instead of `kubectl` for cluster interactions.
+- Omit `startingCSV` in `sources/` subscriptions by default; pin only through explicit production overrides.
+- Prefer consistency and derivability from repo structure over duplicate explicit configuration.

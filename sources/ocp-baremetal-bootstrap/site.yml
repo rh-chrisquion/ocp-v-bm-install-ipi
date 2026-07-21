@@ -11,4 +11,3 @@
   roles:
     - role: ocp_v420_baremetal_image_server
       when: ocp_agent_image_publish_enabled | default(false) | bool
-

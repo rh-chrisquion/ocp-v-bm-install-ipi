@@ -123,7 +123,7 @@ and documented in a follow-up commit to `docs/adr/` or a GitHub issue.
 Branch protection was applied via `gh api`:
 
 ```bash
-gh api repos/sean-vaughan/openshift-gitops/branches/main/protection \
+gh api repos/<org>/<repo>/branches/main/protection \
   --method PUT --input - <<'EOF'
 {
   "required_status_checks": null,

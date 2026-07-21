@@ -1,0 +1,9 @@
+apiVersion: gitops.openshift.io/v1alpha1
+kind: ClusterTypeProfile
+metadata:
+  name: sno-lab
+spec:
+  appGroups:
+    - platform-base
+  appProjects:
+    - platform

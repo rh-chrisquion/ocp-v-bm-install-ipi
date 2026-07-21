@@ -1,0 +1,22 @@
+projects:
+  - name: platform
+    description: Shared platform governance project
+    sourceRepos:
+      - "*"
+    destinations:
+      - name: "*"
+        namespace: "*"
+    clusterResourceWhitelist:
+      - group: "*"
+        kind: "*"
+    namespaceResourceWhitelist:
+      - group: "*"
+        kind: "*"
+    teams:
+      - name: platform-team
+        admins:
+          - cn=ocp-platform-admins,ou=groups,dc=example,dc=com
+        developers:
+          - cn=ocp-platform-developers,ou=groups,dc=example,dc=com
+        viewers:
+          - cn=ocp-platform-viewers,ou=groups,dc=example,dc=com

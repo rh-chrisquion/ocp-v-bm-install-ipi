@@ -1,0 +1,8 @@
+apiVersion: gitops.openshift.io/v1alpha1
+kind: DataCenterProfile
+metadata:
+  name: lab
+spec:
+  dnsDomain: lab.example.com
+  ntpSources:
+    - pool.ntp.org

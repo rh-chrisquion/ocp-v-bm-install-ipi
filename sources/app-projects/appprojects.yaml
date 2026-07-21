@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: openshift-gitops
+spec:
+  description: Shared platform governance project
+  sourceRepos:
+    - "*"
+  destinations:
+    - name: "*"
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  roles:
+    - name: platform-team-admins
+      groups:
+        - cn=ocp-platform-admins,ou=groups,dc=example,dc=com
+      policies:
+        - p, proj:platform:platform-team-admins, applications, *, platform/*, allow
+    - name: platform-team-developers
+      groups:
+        - cn=ocp-platform-developers,ou=groups,dc=example,dc=com
+      policies:
+        - p, proj:platform:platform-team-developers, applications, get, platform/*, allow
+        - p, proj:platform:platform-team-developers, applications, sync, platform/*, allow
+    - name: platform-team-viewers
+      groups:
+        - cn=ocp-platform-viewers,ou=groups,dc=example,dc=com
+      policies:
+        - p, proj:platform:platform-team-viewers, applications, get, platform/*, allow

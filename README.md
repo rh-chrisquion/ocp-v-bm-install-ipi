@@ -1,110 +1,65 @@
-# OCP-V 4.20 bare-metal Ansible scaffold (HPE Gen11)
+# OpenShift GitOps Repository
 
-This project automates two parts of an OpenShift 4.20 bare-metal agent install workflow:
+This repository is being aligned to an app-centric OpenShift GitOps model where:
 
-1. Generate `install-config.yaml` and `agent-config.yaml`
-2. Optionally publish and serve the generated agent ISO to bare-metal hosts
+- deployable application content lives in `sources/<app-name>/`
+- per-cluster rollout is controlled by `clusters/<clusterName>/<app>.yaml` gate files
+- organizational composition lives in `profiles/`
+- architecture decisions are documented in `docs/adr/`
 
-The current model is a 5-node deployment where all nodes are control-plane and schedulable compute.
-
-## Current playbook behavior
-
-`site.yml` contains two plays:
-
-- `ocp_v420_baremetal` on `localhost`: always runs and generates manifests
-- `ocp_v420_baremetal_image_server` on `image_server`: runs only when `ocp_agent_image_publish_enabled=true`
-
-The image-server play requires privilege escalation (`become: true`) because it writes to `/var/lib` and installs a `systemd` unit.
-
-## Network model
-
-The network model is inventory-driven and expects three LACP (802.3ad) bonds per node:
-
-- OCP data plane bond
-- Storage bond
-- UDP multicast bond
-
-Each bond defines:
-
-- Bond name
-- Two physical NIC members
-- MTU
-- Optional gateway/default route
-- Optional DNS servers
+The active guardrails are in `AGENTS.md` and accepted ADRs (`0001`-`0010`).
 
 ## Repository layout
 
-- `site.yml`: entry playbook
-- `inventories/lab/hosts.yml`: inventory (includes `image_server` group)
-- `inventories/lab/group_vars/all.yml`: all configurable values
-- `roles/ocp_v420_baremetal`: manifest generation role
-- `roles/ocp_v420_baremetal_image_server`: ISO publishing + HTTP service role
+- `sources/`: application deployment units
+  - `sources/app-of-apps/`: ApplicationSet and generator defaults
+  - `sources/app-projects/`: AppProject/RBAC source content
+  - `sources/ocp-baremetal-bootstrap/`: bare-metal bootstrap Ansible app source
+- `clusters/`: cluster gate files and bootstrap overlays
+  - `clusters/ocpv420/`: lab cluster gate set and app-of-apps bootstrap artifacts
+- `profiles/`: team, cluster-type, and data-center profiles
+- `docs/adr/`: architectural decision records
+- `.github/`: CI and ADR compliance automation
 
-## Inventory configuration
+## Bootstrap app source (bare metal)
 
-Update `inventories/lab/group_vars/all.yml`:
+The previous top-level Ansible scaffold was moved to:
 
-- Cluster metadata (`ocp_cluster_name`, `ocp_base_domain`)
-- Credentials (`ocp_pull_secret`, `ocp_ssh_public_key`)
-- VIPs (`ocp_api_vip`, `ocp_ingress_vip`)
-- Network CIDRs and `ocp_network_bonds`
-- Node inventory under `ocp_nodes` (BMC, boot MAC, root device hint, per-bond IPs)
-- Image publishing variables (`ocp_agent_image_*`)
+- `sources/ocp-baremetal-bootstrap/site.yml`
+- `sources/ocp-baremetal-bootstrap/inventories/lab/`
+- `sources/ocp-baremetal-bootstrap/roles/`
 
-Update `inventories/lab/hosts.yml`:
+This keeps bootstrap automation app-centric and consistent with ADR-0001.
 
-- Set the `image_server` host to the provisioning machine that will serve the ISO
-- Ensure Ansible can connect to that host and escalate privileges
-
-## End-to-end workflow
-
-From the project directory:
+### Bare-metal workflow
 
 ```bash
-cd ocp-v420-baremetal-ansible
-```
-
-### 1) Generate manifests
-
-```bash
+cd sources/ocp-baremetal-bootstrap
 ansible-playbook site.yml
-```
-
-Expected output files:
-
-- `build/install-config.yaml`
-- `build/agent-config.yaml`
-
-### 2) Build the agent ISO
-
-```bash
 openshift-install agent create image --dir build
-```
-
-### 3) Publish and serve the ISO
-
-Set `ocp_agent_image_publish_enabled: true` and set `ocp_agent_image_url_host` to an IP/FQDN reachable by bare-metal hosts, then run:
-
-```bash
 ansible-playbook site.yml -e ocp_agent_image_publish_enabled=true
 ```
 
-The image-server role will:
+## Guardrail automation
 
-- Locate the newest `*.iso` in `ocp_agent_image_source_dir` (default: `./build`)
-- Copy it to `ocp_agent_image_publish_dir` (default: `/var/lib/ocp-agent-image`)
-- Install and start `ocp-agent-image-server` (`python3 -m http.server`)
-- Print the final boot URL for node media configuration
+CI and guardrail checks are defined in:
 
-## Image publishing variables
+- `.github/workflows/ci.yaml`
+- `.github/scripts/adr-compliance.sh`
+- `.yamllint.yaml`
+- `.markdownlint.yaml`
+- `.kube-linter.yaml`
 
-Common variables in `inventories/lab/group_vars/all.yml`:
+ADR compliance script enforces key mechanical invariants such as:
 
-- `ocp_agent_image_publish_enabled` (default: `false`)
-- `ocp_agent_image_source_dir` (default: `{{ ocp_install_dir }}`)
-- `ocp_agent_image_glob` (default: `*.iso`)
-- `ocp_agent_image_publish_dir` (default: `/var/lib/ocp-agent-image`)
-- `ocp_agent_image_publish_filename` (optional override)
-- `ocp_agent_image_server_port` (default: `8080`)
-- `ocp_agent_image_url_host` (must be reachable by bare-metal hosts)
+- gate file naming and top-level key restrictions
+- required `app-of-apps.yaml` per cluster directory
+- no `startingCSV` under `sources/`
+- no Argo destination `name: in-cluster`
+
+## Conventions
+
+- Use `oc` (not `kubectl`) for OpenShift cluster interaction examples.
+- Keep defaults centralized and use gate files only for intentional deviations.
+- Keep production-specific pins (for example versions/images) explicit and auditable.
 

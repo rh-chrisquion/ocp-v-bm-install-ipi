@@ -26,7 +26,7 @@ with "ready for production."
 
 Development follows a **cluster-first, git-second** flow:
 
-1. **Experiment on a dev cluster** — use the Argo CD UI, `oc`/`kubectl`, or `helm`
+1. **Experiment on a dev cluster** — use the Argo CD UI, `oc`, or `helm`
    directly on the cluster. No git commits, no pushes. The cluster is the
    scratchpad.
 

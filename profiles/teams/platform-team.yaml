@@ -1,0 +1,14 @@
+apiVersion: gitops.openshift.io/v1alpha1
+kind: TeamProfile
+metadata:
+  name: platform-team
+spec:
+  ldapGroups:
+    admins:
+      - cn=ocp-platform-admins,ou=groups,dc=example,dc=com
+    developers:
+      - cn=ocp-platform-developers,ou=groups,dc=example,dc=com
+    viewers:
+      - cn=ocp-platform-viewers,ou=groups,dc=example,dc=com
+  appProjects:
+    - platform

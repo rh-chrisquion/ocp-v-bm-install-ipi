@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: app-of-apps
+  namespace: openshift-gitops
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - git:
+        repoURL: https://github.com/example/openshift-gitops.git
+        revision: main
+        files:
+          - path: clusters/*/*.yaml
+  template:
+    metadata:
+      name: "{{ index .path.segments 1 }}---platform---{{ .path.filenameNormalized }}"
+      labels:
+        gitops.openshift.io/cluster-name: "{{ index .path.segments 1 }}"
+        gitops.openshift.io/project: platform
+        gitops.openshift.io/app-name: "{{ .path.filenameNormalized }}"
+        gitops.openshift.io/source-path: "sources/{{ .path.filenameNormalized }}"
+    spec:
+      project: platform
+      source:
+        repoURL: https://github.com/example/openshift-gitops.git
+        targetRevision: main
+        path: "sources/{{ .path.filenameNormalized }}"
+      destination:
+        name: "{{ index .path.segments 1 }}"
+        namespace: openshift-gitops
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+      syncOptions:
+        - CreateNamespace=true
+  templatePatch: |
+    {{- if .metadata }}
+    metadata:
+      {{ toYaml .metadata | indent 6 }}
+    {{- end }}
+    {{- if .spec }}
+    spec:
+      {{ toYaml .spec | indent 6 }}
+    {{- end }}
+  ignoreApplicationDifferences:
+    - jsonPointers:
+        - /spec/source/targetRevision
+        - /spec/source/repoURL
+        - /spec/source/path
+        - /spec/syncPolicy

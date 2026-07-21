@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocp-baremetal-bootstrap-metadata
+  namespace: openshift-gitops
+data:
+  purpose: "Tracks app-centric location for bare-metal bootstrap automation"
+  ansiblePlaybook: "site.yml"
+  inventory: "inventories/lab/hosts.yml"

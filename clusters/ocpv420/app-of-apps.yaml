@@ -1,0 +1,8 @@
+metadata:
+  labels:
+    gitops.openshift.io/cluster-name: ocpv420
+spec:
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false

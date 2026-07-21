@@ -60,4 +60,3 @@
     msg:
       - "Generated {{ ocp_output_dir }}/install-config.yaml"
       - "Generated {{ ocp_output_dir }}/agent-config.yaml"
-

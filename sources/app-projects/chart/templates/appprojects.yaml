@@ -1,0 +1,54 @@
+{{- range $project := .Values.projects }}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ $project.name }}
+  namespace: openshift-gitops
+spec:
+  description: {{ $project.description | quote }}
+  sourceRepos:
+{{- range $repo := $project.sourceRepos }}
+    - {{ $repo | quote }}
+{{- end }}
+  destinations:
+{{- range $destination := $project.destinations }}
+    - name: {{ $destination.name | quote }}
+      namespace: {{ $destination.namespace | quote }}
+{{- end }}
+  clusterResourceWhitelist:
+{{- range $resource := $project.clusterResourceWhitelist }}
+    - group: {{ $resource.group | quote }}
+      kind: {{ $resource.kind | quote }}
+{{- end }}
+  namespaceResourceWhitelist:
+{{- range $resource := $project.namespaceResourceWhitelist }}
+    - group: {{ $resource.group | quote }}
+      kind: {{ $resource.kind | quote }}
+{{- end }}
+  roles:
+{{- range $team := $project.teams }}
+    - name: {{ printf "%s-admins" $team.name }}
+      groups:
+{{- range $group := $team.admins }}
+        - {{ $group | quote }}
+{{- end }}
+      policies:
+        - {{ printf "p, proj:%s:%s-admins, applications, *, %s/*, allow" $project.name $team.name $project.name | quote }}
+    - name: {{ printf "%s-developers" $team.name }}
+      groups:
+{{- range $group := $team.developers }}
+        - {{ $group | quote }}
+{{- end }}
+      policies:
+        - {{ printf "p, proj:%s:%s-developers, applications, get, %s/*, allow" $project.name $team.name $project.name | quote }}
+        - {{ printf "p, proj:%s:%s-developers, applications, sync, %s/*, allow" $project.name $team.name $project.name | quote }}
+    - name: {{ printf "%s-viewers" $team.name }}
+      groups:
+{{- range $group := $team.viewers }}
+        - {{ $group | quote }}
+{{- end }}
+      policies:
+        - {{ printf "p, proj:%s:%s-viewers, applications, get, %s/*, allow" $project.name $team.name $project.name | quote }}
+{{- end }}
+---
+{{- end }}

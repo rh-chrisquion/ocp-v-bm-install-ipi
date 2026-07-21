@@ -53,10 +53,10 @@ ApplicationSet manifest itself.
 - **Why**: The ApplicationSet stays in sync with git. Changes to generator config,
   `ignoreApplicationDifferences`, or template defaults are applied automatically.
 - **Bootstrapping seam**: The ApplicationSet must be applied manually once
-  (via `kubectl apply` or Ansible) before it can manage itself.
+  (via `oc apply` or Ansible) before it can manage itself.
 
   ```
-  kubectl apply -k clusters/<clusterName>/app-of-apps/
+  oc apply -k clusters/<clusterName>/app-of-apps/
   ```
 
   After this, Argo CD takes over and the ApplicationSet manages itself.
@@ -70,7 +70,7 @@ generate Applications — but the cluster secret is deployed by an Application.
 - **Why**: The cluster secret stays in git. Cluster identity is version-controlled,
   audited, and not a manual artifact. Per ADR-0004, the secret uses the real cluster
   name, which matches every Application name and gate file.
-- **Bootstrapping seam**: Resolved by the same `kubectl apply -k` in seam #1 above.
+- **Bootstrapping seam**: Resolved by the same `oc apply -k` in seam #1 above.
   The cluster secret and ApplicationSet are in the same Kustomize overlay, so a
   single apply delivers both.
 
@@ -88,8 +88,8 @@ projects will fail validation.
 
   ```
   helm template sources/app-projects/chart \
-    -f sources/app-projects/platform.yaml \
-    | kubectl apply -f -
+    -f sources/app-projects/chart/values.yaml \
+    | oc apply -f -
   ```
 
   Alternatively, temporarily assign new Applications to the `default` AppProject
@@ -118,7 +118,7 @@ projects will fail validation.
 - The entire cluster configuration — including the GitOps tooling itself — is
   version-controlled and drift-free after bootstrapping.
 - Adding a cluster is a git commit (new gate files and cluster secret) plus a single
-  `kubectl apply`. All subsequent state is managed by the flywheel.
+  `oc apply`. All subsequent state is managed by the flywheel.
 - The bootstrapping seams are explicit and documented. Operators know exactly what
   must be done manually vs. what is automated.
 
@@ -126,7 +126,7 @@ projects will fail validation.
 
 - The bootstrapping sequence matters. Applying resources in the wrong order produces
   transient errors. The documented bootstrap order is:
-  1. `kubectl apply -k clusters/<clusterName>/app-of-apps/` (delivers ApplicationSet
+  1. `oc apply -k clusters/<clusterName>/app-of-apps/` (delivers ApplicationSet
      and cluster secret in one step).
   2. Wait for `app-of-apps` Application to sync and reach Healthy state.
   3. `app-projects` Application syncs automatically; AppProjects are created.

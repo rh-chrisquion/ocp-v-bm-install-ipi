@@ -1,0 +1,49 @@
+{% for ns in ocp_integrity_namespace_guardrails %}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ ns.name }}
+  labels:
+    integrity-guardrails: enabled
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: integrity-default-limits
+  namespace: {{ ns.name }}
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "{{ ns.default_limit_cpu }}"
+        memory: "{{ ns.default_limit_memory }}"
+      defaultRequest:
+        cpu: "{{ ns.default_request_cpu }}"
+        memory: "{{ ns.default_request_memory }}"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: integrity-workload-budget
+  namespace: {{ ns.name }}
+spec:
+  hard:
+    requests.cpu: "{{ ns.cpu_requests }}"
+    requests.memory: "{{ ns.memory_requests }}"
+    limits.cpu: "{{ ns.cpu_limits }}"
+    limits.memory: "{{ ns.memory_limits }}"
+    requests.storage: "{{ ns.storage_requests }}"
+    pods: "{{ ns.pods }}"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: integrity-critical-pdb
+  namespace: {{ ns.name }}
+spec:
+  minAvailable: {{ ns.pdb_min_available }}
+  selector:
+    matchLabels:
+      integrity.workload-tier: critical
+---
+{% endfor %}

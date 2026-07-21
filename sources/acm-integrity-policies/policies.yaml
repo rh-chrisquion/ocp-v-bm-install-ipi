@@ -1,0 +1,130 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: combined-node-integrity-audit
+  namespace: open-cluster-management-global-set
+spec:
+  remediationAction: inform
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: must-have-control-plane-performance-profile
+        spec:
+          remediationAction: inform
+          severity: high
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: performance.openshift.io/v2
+                kind: PerformanceProfile
+                metadata:
+                  name: control-plane-integrity
+                  namespace: openshift-cluster-node-tuning-operator
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: must-have-control-plane-kubelet-reservations
+        spec:
+          remediationAction: inform
+          severity: high
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: machineconfiguration.openshift.io/v1
+                kind: KubeletConfig
+                metadata:
+                  name: control-plane-integrity
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: must-have-admission-policies
+        spec:
+          remediationAction: inform
+          severity: medium
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: admissionregistration.k8s.io/v1
+                kind: ValidatingAdmissionPolicy
+                metadata:
+                  name: integrity-require-resources
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: admissionregistration.k8s.io/v1
+                kind: ValidatingAdmissionPolicy
+                metadata:
+                  name: integrity-require-placement-for-platform
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: combined-node-integrity-enforce
+  namespace: open-cluster-management-global-set
+spec:
+  remediationAction: enforce
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: enforce-integrity-namespace-baseline
+        spec:
+          remediationAction: enforce
+          severity: high
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Namespace
+                metadata:
+                  name: platform-critical
+                  labels:
+                    integrity-guardrails: enabled
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: LimitRange
+                metadata:
+                  name: integrity-default-limits
+                  namespace: platform-critical
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: ResourceQuota
+                metadata:
+                  name: integrity-workload-budget
+                  namespace: platform-critical
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: policy/v1
+                kind: PodDisruptionBudget
+                metadata:
+                  name: integrity-critical-pdb
+                  namespace: platform-critical
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: enforce-priority-classes
+        spec:
+          remediationAction: enforce
+          severity: medium
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: scheduling.k8s.io/v1
+                kind: PriorityClass
+                metadata:
+                  name: platform-critical
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: scheduling.k8s.io/v1
+                kind: PriorityClass
+                metadata:
+                  name: platform-standard

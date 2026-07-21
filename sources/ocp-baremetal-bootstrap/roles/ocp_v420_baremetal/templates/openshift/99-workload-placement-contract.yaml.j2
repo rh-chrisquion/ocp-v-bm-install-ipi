@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: combined-node-placement-contract
+  namespace: openshift-config
+data:
+  overview: >
+    Contract for workloads allowed on combined control/compute nodes. Workloads
+    should include resource requests/limits, required node affinity, topology spread,
+    and a control-plane toleration when explicitly approved.
+  targetControlPlaneMaxUtilizationPercent: "{{ ocp_integrity_control_plane_target_max_utilization_percent }}"
+  requiredNodeSelector: "{{ ocp_integrity_placement.required_node_selector | to_json }}"
+  requiredTopologySpreadKey: "{{ ocp_integrity_placement.required_topology_spread_key }}"
+  controlPlaneTolerationKey: "{{ ocp_integrity_placement.control_plane_workload_taint.key }}"
+  controlPlaneTolerationEffect: "{{ ocp_integrity_placement.control_plane_workload_taint.effect }}"

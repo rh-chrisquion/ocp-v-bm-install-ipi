@@ -2,23 +2,22 @@
 rhcs_token = "REPLACE_WITH_OCM_API_TOKEN"
 
 # Cluster identity
-cluster_name      = "tt-rosa-hub-hcp"
+cluster_name      = "example-rosa-hub-hcp"
 openshift_version = "4.22.0"
 
 # AWS placement
-aws_region             = "us-east-2"
-aws_availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
+aws_region             = "us-east-1"
+aws_availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
 aws_subnet_ids         = ["subnet-aaaaaaaa", "subnet-bbbbbbbb", "subnet-cccccccc"]
 machine_cidr           = "10.0.0.0/16"
 
 # STS role/OIDC settings (module-managed)
-account_role_prefix  = "tt-rosa-hub"
-operator_role_prefix = "tt-rosa-hub-operators"
+account_role_prefix  = "example-rosa-hub"
+operator_role_prefix = "example-rosa-hub-operators"
 
 # Worker sizing for ACM + AAP + ArgoCD hub workloads
 compute_machine_type = "m5.2xlarge"
 replicas             = 6
-worker_disk_size     = 300
 
 # Autoscaling for HCP worker pools
 # Set min_replicas_per_pool = 0 to allow scale-to-zero behavior.
@@ -27,7 +26,7 @@ min_replicas_per_pool           = 0
 max_replicas_per_pool           = 8
 
 tags = {
-  environment = "hub"
-  owner       = "trading-technologies-cloud-engineering"
+  environment = "example"
+  owner       = "platform-team"
   managed_by  = "terraform"
 }

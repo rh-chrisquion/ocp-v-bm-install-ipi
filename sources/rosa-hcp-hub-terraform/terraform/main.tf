@@ -45,7 +45,7 @@ locals {
 
 module "rosa_hcp_hub" {
   source  = "terraform-redhat/rosa-hcp/rhcs"
-  version = var.rosa_hcp_module_version
+  version = "1.7.3"
 
   cluster_name           = var.cluster_name
   openshift_version      = var.openshift_version
@@ -62,7 +62,6 @@ module "rosa_hcp_hub" {
 
   compute_machine_type = var.compute_machine_type
   replicas             = var.enable_autoscaled_machine_pools ? null : var.replicas
-  worker_disk_size     = var.worker_disk_size
 
   machine_pools = local.effective_machine_pools
 

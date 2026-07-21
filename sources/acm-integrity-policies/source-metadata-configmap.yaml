@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acm-integrity-policies-source
+  namespace: openshift-gitops
+data:
+  purpose: "ACM policy set for combined control/compute integrity governance"
+  scope: "on-prem clusters with combined control/compute nodes"

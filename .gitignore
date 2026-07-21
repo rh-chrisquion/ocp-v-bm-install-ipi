@@ -1,0 +1,23 @@
+# Local Python virtual environment
+.venv/
+
+# Local pull secret for bare-metal bootstrap (never commit credentials)
+sources/ocp-baremetal-bootstrap/secrets/
+sources/ocp-baremetal-bootstrap/inventories/lab/group_vars/all.local.yml
+
+# Generated installer artifacts can contain embedded pull secret content
+sources/ocp-baremetal-bootstrap/build/
+
+# Local cluster endpoint metadata overrides
+clusters/ocpv420/app-of-apps/cluster-secret.local.yaml
+
+# Local installer binaries and archives
+sources/ocp-baremetal-bootstrap/openshift-install
+sources/ocp-baremetal-bootstrap/openshift-install-*.tar.gz
+
+# OS/editor artifacts
+.DS_Store
+
+# Terraform plan artifacts can include sensitive infrastructure details
+*.plan
+*.tfplan

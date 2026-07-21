@@ -1,0 +1,32 @@
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: combined-node-integrity-onprem
+  namespace: open-cluster-management-global-set
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: gitops.openshift.io/deployment-model
+              operator: In
+              values:
+                - onprem-combined
+            - key: gitops.openshift.io/control-compute
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: combined-node-integrity-binding
+  namespace: open-cluster-management-global-set
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: combined-node-integrity-onprem
+subjects:
+  - apiGroup: policy.open-cluster-management.io
+    kind: PolicySet
+    name: combined-node-integrity

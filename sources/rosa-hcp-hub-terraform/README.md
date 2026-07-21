@@ -26,6 +26,8 @@ terraform init
 terraform plan
 ```
 
+`terraform.tfvars` is gitignored so environment-specific values stay local.
+
 ## Notes
 
 - This configuration intentionally sets `cluster_autoscaler_enabled = false`

@@ -1,9 +1,27 @@
+- name: Check local infrastructure values file presence
+  ansible.builtin.stat:
+    path: "{{ ocp_local_values_file }}"
+  register: ocp_local_values_file_stat
+
+- name: Require local infrastructure values file when enforced
+  ansible.builtin.assert:
+    that:
+      - ocp_local_values_file_stat.stat.exists
+    fail_msg: >-
+      Local infrastructure values file is required but missing: {{ ocp_local_values_file }}.
+      Create this file (gitignored) with your cluster-specific values.
+  when: ocp_local_values_required | bool
+
+- name: Load local infrastructure values file when present
+  ansible.builtin.include_vars:
+    file: "{{ ocp_local_values_file }}"
+  when: ocp_local_values_file_stat.stat.exists
+
 - name: Validate required inventory variables
   ansible.builtin.assert:
     that:
       - ocp_cluster_name is defined
       - ocp_base_domain is defined
-      - ocp_pull_secret is defined
       - ocp_ssh_public_key is defined
       - ocp_api_vip is defined
       - ocp_ingress_vip is defined
@@ -14,6 +32,124 @@
       - "'storage' in ocp_network_bonds"
       - "'multicast' in ocp_network_bonds"
     fail_msg: Required OCP inventory variables are missing. Update inventories/*/group_vars/all.yml.
+
+- name: Resolve pull secret file path when provided
+  ansible.builtin.set_fact:
+    ocp_pull_secret_file_resolved: >-
+      {{
+        ocp_pull_secret_file
+        if (ocp_pull_secret_file | default('')).startswith('/')
+        else (playbook_dir ~ '/' ~ (ocp_pull_secret_file | default('')))
+      }}
+  when: (ocp_pull_secret_file | default('') | trim | length) > 0
+
+- name: Check pull secret file presence
+  ansible.builtin.stat:
+    path: "{{ ocp_pull_secret_file_resolved }}"
+  register: ocp_pull_secret_file_stat
+  when: (ocp_pull_secret_file | default('') | trim | length) > 0
+
+- name: Validate pull secret input source
+  ansible.builtin.assert:
+    that:
+      - (ocp_pull_secret | default('') | trim | length) > 0 or (ocp_pull_secret_file_stat is defined and (ocp_pull_secret_file_stat.stat.exists | default(false)))
+    fail_msg: >-
+      Set either ocp_pull_secret (inline JSON) or ocp_pull_secret_file (path to a local pull-secret JSON file).
+
+- name: Load pull secret from local file
+  ansible.builtin.set_fact:
+    ocp_pull_secret_effective: "{{ lookup('ansible.builtin.file', ocp_pull_secret_file_resolved) | trim }}"
+  when:
+    - (ocp_pull_secret | default('') | trim | length) == 0
+    - (ocp_pull_secret_file | default('') | trim | length) > 0
+
+- name: Use inline pull secret when provided
+  ansible.builtin.set_fact:
+    ocp_pull_secret_effective: "{{ ocp_pull_secret | trim }}"
+  when: (ocp_pull_secret | default('') | trim | length) > 0
+
+- name: Validate pull secret is valid JSON
+  ansible.builtin.set_fact:
+    ocp_pull_secret_effective: "{{ (ocp_pull_secret_effective | from_json) | to_json }}"
+
+- name: Validate integrity baseline settings
+  ansible.builtin.assert:
+    that:
+      - (ocp_integrity_control_plane_target_max_utilization_percent | int) > 0
+      - (ocp_integrity_control_plane_target_max_utilization_percent | int) <= 60
+      - ocp_integrity_kubelet_reservations.kube_reserved.cpu is defined
+      - ocp_integrity_kubelet_reservations.kube_reserved.memory is defined
+      - ocp_integrity_kubelet_reservations.system_reserved.cpu is defined
+      - ocp_integrity_kubelet_reservations.system_reserved.memory is defined
+      - ocp_integrity_namespace_guardrails | length > 0
+      - ocp_integrity_priority_classes | length > 0
+    fail_msg: >-
+      Integrity baseline settings are invalid. Keep control-plane target utilization <= 60%
+      and ensure kube/system reservations plus guardrail definitions are provided.
+  when: ocp_integrity_enabled | bool
+
+- name: Validate integrity CPU partition ranges do not overlap
+  ansible.builtin.shell: |
+    python3 - <<'PY'
+    import sys
+
+    reserved = "{{ ocp_integrity_cpu_partitioning.reserved_cpus }}"
+    isolated = "{{ ocp_integrity_cpu_partitioning.isolated_cpus }}"
+
+    def parse_cpu_ranges(raw):
+        cpus = set()
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                start, end = part.split("-", 1)
+                start_i = int(start)
+                end_i = int(end)
+                if start_i > end_i:
+                    raise ValueError(f"Invalid range: {part}")
+                cpus.update(range(start_i, end_i + 1))
+            else:
+                cpus.add(int(part))
+        return cpus
+
+    reserved_set = parse_cpu_ranges(reserved)
+    isolated_set = parse_cpu_ranges(isolated)
+    overlap = reserved_set.intersection(isolated_set)
+    if overlap:
+        raise SystemExit(f"CPU overlap detected between reserved and isolated sets: {sorted(overlap)}")
+    if not reserved_set or not isolated_set:
+        raise SystemExit("Both reserved and isolated CPU sets must be non-empty.")
+    print("cpu-partitioning-validation-ok")
+    PY
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_cpu_partitioning.enabled | bool
+
+- name: Validate guardrail namespace definitions are complete
+  ansible.builtin.assert:
+    that:
+      - ns.name is defined
+      - ns.cpu_requests is defined
+      - ns.cpu_limits is defined
+      - ns.memory_requests is defined
+      - ns.memory_limits is defined
+      - ns.pods is defined
+      - ns.storage_requests is defined
+      - ns.default_request_cpu is defined
+      - ns.default_request_memory is defined
+      - ns.default_limit_cpu is defined
+      - ns.default_limit_memory is defined
+      - ns.pdb_min_available is defined
+    fail_msg: "Namespace guardrail entry {{ ns | to_json }} is missing required fields."
+  loop: "{{ ocp_integrity_namespace_guardrails }}"
+  loop_control:
+    loop_var: ns
+    label: "{{ ns.name | default('unknown') }}"
+  when: ocp_integrity_enabled | bool
 
 - name: Validate node count aligns to replica shape
   ansible.builtin.assert:
@@ -55,8 +191,89 @@
     dest: "{{ ocp_output_dir }}/agent-config.yaml"
     mode: "0640"
 
+- name: Ensure additional manifest directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0750"
+  loop:
+    - "{{ ocp_output_dir }}/openshift"
+    - "{{ ocp_output_dir }}/cluster-manifests"
+  when: ocp_integrity_enabled | bool
+
+- name: Check openshift-install availability for cluster-manifests generation
+  ansible.builtin.command: /usr/bin/env openshift-install version
+  register: ocp_openshift_install_check
+  changed_when: false
+  failed_when: false
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+
+- name: Fail when openshift-install is unavailable for manifest generation
+  ansible.builtin.assert:
+    that:
+      - ocp_openshift_install_check.rc == 0
+    fail_msg: >-
+      openshift-install is required for day-0 cluster-manifests generation.
+      Install openshift-install and rerun this playbook.
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+
+- name: Generate cluster-manifests from installer inputs
+  ansible.builtin.command: "openshift-install agent create cluster-manifests --dir {{ ocp_output_dir }}"
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+    - ocp_openshift_install_check.rc == 0
+
+- name: Ensure agent-cluster-install makes control-plane schedulable
+  ansible.builtin.lineinfile:
+    path: "{{ ocp_output_dir }}/cluster-manifests/agent-cluster-install.yaml"
+    regexp: "^  mastersSchedulable:"
+    line: "  mastersSchedulable: true"
+    insertafter: "^spec:"
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+    - ocp_schedulable_masters | default(false) | bool
+
+- name: Generate day-0 integrity manifests (performance, kubelet, placement, admission)
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ ocp_output_dir }}/openshift/{{ item.dest }}"
+    mode: "0640"
+  loop:
+    - src: openshift/99-control-plane-performanceprofile.yaml.j2
+      dest: 99-control-plane-performanceprofile.yaml
+    - src: openshift/99-control-plane-kubeletconfig.yaml.j2
+      dest: 99-control-plane-kubeletconfig.yaml
+    - src: openshift/99-priorityclasses.yaml.j2
+      dest: 99-priorityclasses.yaml
+    - src: openshift/99-namespace-guardrails.yaml.j2
+      dest: 99-namespace-guardrails.yaml
+    - src: openshift/99-workload-placement-contract.yaml.j2
+      dest: 99-workload-placement-contract.yaml
+    - src: openshift/99-integrity-validating-admission.yaml.j2
+      dest: 99-integrity-validating-admission.yaml
+  when: ocp_integrity_enabled | bool
+
 - name: Show generated artifact locations
   ansible.builtin.debug:
     msg:
       - "Generated {{ ocp_output_dir }}/install-config.yaml"
       - "Generated {{ ocp_output_dir }}/agent-config.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-control-plane-performanceprofile.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-control-plane-kubeletconfig.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-namespace-guardrails.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-integrity-validating-admission.yaml"
+
+- name: Show control-plane schedulable note for agent-based flow
+  ansible.builtin.debug:
+    msg:
+      - "The install-config.yaml no longer accepts mastersSchedulable in newer OpenShift releases."
+      - "This role now writes day-0 integrity manifests and sets spec.mastersSchedulable in cluster-manifests/agent-cluster-install.yaml."
+      - "Rebuild the ISO after manifest generation:"
+      - "  openshift-install agent create image --dir {{ ocp_output_dir }}"
+  when: ocp_schedulable_masters | default(false) | bool

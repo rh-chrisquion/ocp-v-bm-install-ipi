@@ -4,12 +4,6 @@ variable "rhcs_token" {
   sensitive   = true
 }
 
-variable "rosa_hcp_module_version" {
-  description = "Version of terraform-redhat/rosa-hcp/rhcs module."
-  type        = string
-  default     = "1.7.3"
-}
-
 variable "cluster_name" {
   description = "ROSA HCP cluster name."
   type        = string
@@ -103,12 +97,6 @@ variable "max_replicas_per_pool" {
   description = "Maximum replicas per machine pool when autoscaling is enabled."
   type        = number
   default     = 8
-}
-
-variable "worker_disk_size" {
-  description = "Root disk size in GiB for workers."
-  type        = number
-  default     = 300
 }
 
 variable "tags" {

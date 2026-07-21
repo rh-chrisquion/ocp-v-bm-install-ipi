@@ -1,0 +1,31 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: KubeletConfig
+metadata:
+  name: control-plane-integrity
+spec:
+  machineConfigPoolSelector:
+    matchLabels:
+      pools.operator.machineconfiguration.openshift.io/master: ""
+  kubeletConfig:
+    kubeReserved:
+{% for key, value in ocp_integrity_kubelet_reservations.kube_reserved.items() %}
+      {{ key }}: "{{ value }}"
+{% endfor %}
+    systemReserved:
+{% for key, value in ocp_integrity_kubelet_reservations.system_reserved.items() %}
+      {{ key }}: "{{ value }}"
+{% endfor %}
+    evictionHard:
+{% for key, value in ocp_integrity_kubelet_reservations.eviction_hard.items() %}
+      {{ key }}: "{{ value }}"
+{% endfor %}
+    enforceNodeAllocatable:
+      - pods
+      - system-reserved
+      - kube-reserved
+{% if ocp_integrity_placement.enforce_taint | bool %}
+    registerWithTaints:
+      - key: "{{ ocp_integrity_placement.control_plane_workload_taint.key }}"
+        value: "{{ ocp_integrity_placement.control_plane_workload_taint.value }}"
+        effect: "{{ ocp_integrity_placement.control_plane_workload_taint.effect }}"
+{% endif %}

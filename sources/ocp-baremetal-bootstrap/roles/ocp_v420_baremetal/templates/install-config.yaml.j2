@@ -8,7 +8,6 @@ compute:
 controlPlane:
   name: master
   replicas: {{ ocp_control_plane_replicas }}
-mastersSchedulable: {{ (ocp_schedulable_masters | bool) | ternary('true', 'false') }}
 networking:
   networkType: OVNKubernetes
   machineNetwork:
@@ -29,5 +28,5 @@ platform:
     ingressVIPs:
       - {{ ocp_ingress_vip }}
 publish: External
-pullSecret: '{{ ocp_pull_secret | replace("'", "''") }}'
+pullSecret: '{{ ocp_pull_secret_effective | replace("'", "''") }}'
 sshKey: '{{ ocp_ssh_public_key }}'

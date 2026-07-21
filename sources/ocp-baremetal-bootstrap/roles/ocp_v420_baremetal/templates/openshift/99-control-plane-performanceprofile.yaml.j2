@@ -1,0 +1,21 @@
+apiVersion: performance.openshift.io/v2
+kind: PerformanceProfile
+metadata:
+  name: control-plane-integrity
+  namespace: openshift-cluster-node-tuning-operator
+spec:
+  cpu:
+    reserved: "{{ ocp_integrity_cpu_partitioning.reserved_cpus }}"
+    isolated: "{{ ocp_integrity_cpu_partitioning.isolated_cpus }}"
+  machineConfigPoolSelector:
+    pools.operator.machineconfiguration.openshift.io/master: ""
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  numa:
+    topologyPolicy: best-effort
+  realTimeKernel:
+    enabled: false
+  workloadHints:
+    realTime: false
+    highPowerConsumption: false
+    perPodPowerManagement: false

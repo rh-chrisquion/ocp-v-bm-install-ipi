@@ -1,1 +1,61 @@
 ocp_output_dir: "{{ ocp_install_dir | default('./build') }}"
+ocp_pull_secret_file: ""
+ocp_local_values_file: "{{ playbook_dir }}/inventories/lab/group_vars/all.local.yml"
+ocp_local_values_required: false
+
+ocp_integrity_enabled: true
+ocp_integrity_generate_cluster_manifests: true
+ocp_integrity_control_plane_target_max_utilization_percent: 60
+
+ocp_integrity_cpu_partitioning:
+  enabled: true
+  reserved_cpus: "0-3"
+  isolated_cpus: "4-15"
+
+ocp_integrity_kubelet_reservations:
+  kube_reserved:
+    cpu: "1000m"
+    memory: "2Gi"
+    ephemeral-storage: "1Gi"
+  system_reserved:
+    cpu: "500m"
+    memory: "1Gi"
+    ephemeral-storage: "1Gi"
+  eviction_hard:
+    memory.available: "500Mi"
+    nodefs.available: "10%"
+    imagefs.available: "15%"
+
+ocp_integrity_placement:
+  enforce_taint: false
+  control_plane_workload_taint:
+    key: node-role.kubernetes.io/control-plane-workload
+    value: reserved
+    effect: NoSchedule
+  required_node_selector:
+    workload-tier: platform
+  required_topology_spread_key: kubernetes.io/hostname
+
+ocp_integrity_priority_classes:
+  - name: platform-critical
+    value: 1000000000
+    global_default: false
+    description: Critical platform workloads required to keep combined control/compute clusters healthy.
+  - name: platform-standard
+    value: 1000000
+    global_default: false
+    description: Standard platform workloads that may run on combined control/compute nodes.
+
+ocp_integrity_namespace_guardrails:
+  - name: platform-critical
+    cpu_requests: "4"
+    cpu_limits: "16"
+    memory_requests: "8Gi"
+    memory_limits: "32Gi"
+    pods: "200"
+    storage_requests: "500Gi"
+    default_request_cpu: "250m"
+    default_request_memory: "256Mi"
+    default_limit_cpu: "1"
+    default_limit_memory: "1Gi"
+    pdb_min_available: 1

@@ -1,0 +1,67 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: integrity-require-resources
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "object.spec.containers.all(c, has(c.resources) && has(c.resources.requests) && has(c.resources.limits) && has(c.resources.requests.cpu) && has(c.resources.requests.memory) && has(c.resources.limits.cpu) && has(c.resources.limits.memory))"
+      message: "All containers must define cpu/memory requests and limits."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: integrity-require-resources-binding
+spec:
+  policyName: integrity-require-resources
+  validationActions:
+    - Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        integrity-guardrails: enabled
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: integrity-require-placement-for-platform
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: >-
+        !has(object.metadata.labels) ||
+        object.metadata.labels["workload-tier"] != "platform" ||
+        (
+          has(object.spec.tolerations) &&
+          object.spec.tolerations.exists(t, t.key == "{{ ocp_integrity_placement.control_plane_workload_taint.key }}" && t.effect == "{{ ocp_integrity_placement.control_plane_workload_taint.effect }}") &&
+          has(object.spec.affinity) &&
+          has(object.spec.affinity.nodeAffinity) &&
+          has(object.spec.topologySpreadConstraints) &&
+          object.spec.topologySpreadConstraints.exists(t, t.topologyKey == "{{ ocp_integrity_placement.required_topology_spread_key }}")
+        )
+      message: "Platform workloads must include required toleration, nodeAffinity, and topologySpreadConstraints."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: integrity-require-placement-for-platform-binding
+spec:
+  policyName: integrity-require-placement-for-platform
+  validationActions:
+    - Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        integrity-guardrails: enabled

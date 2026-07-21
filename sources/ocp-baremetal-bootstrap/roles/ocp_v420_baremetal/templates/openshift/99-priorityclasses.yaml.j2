@@ -1,0 +1,10 @@
+{% for pc in ocp_integrity_priority_classes %}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ pc.name }}
+value: {{ pc.value }}
+globalDefault: {{ (pc.global_default | default(false) | bool) | ternary('true', 'false') }}
+description: "{{ pc.description }}"
+---
+{% endfor %}

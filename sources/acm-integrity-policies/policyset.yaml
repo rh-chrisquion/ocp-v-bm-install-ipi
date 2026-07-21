@@ -1,0 +1,10 @@
+apiVersion: policy.open-cluster-management.io/v1beta1
+kind: PolicySet
+metadata:
+  name: combined-node-integrity
+  namespace: open-cluster-management-global-set
+spec:
+  description: Policies that protect combined control/compute integrity controls.
+  policies:
+    - combined-node-integrity-audit
+    - combined-node-integrity-enforce

@@ -1,0 +1,8 @@
+spec:
+  project: platform
+  destination:
+    namespace: open-cluster-management-global-set
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

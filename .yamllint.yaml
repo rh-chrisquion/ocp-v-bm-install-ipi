@@ -1,0 +1,15 @@
+extends: default
+
+ignore: |
+  .git/
+  .cursor/
+  sources/*/chart/templates/
+
+rules:
+  indentation:
+    indent-sequences: consistent
+  line-length:
+    max: 160
+    level: warning
+  document-start: disable
+  comments-indentation: disable

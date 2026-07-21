@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: YAML / Markdown / Shell
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lint dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install yamllint
+          npm install -g markdownlint-cli2
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run yamllint (non-strict)
+        run: yamllint .
+
+      - name: Run markdownlint
+        run: markdownlint-cli2 "**/*.md" ".github/**/*.md"
+
+      - name: Run shellcheck
+        run: |
+          if find .github -type f -name '*.sh' | grep -q .; then
+            find .github -type f -name '*.sh' -print0 | xargs -0 shellcheck
+          fi
+
+  validate-manifests:
+    name: Kubernetes / Kustomize / Helm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup tools
+        run: |
+          curl -sSL -o /tmp/kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp
+          sudo install /tmp/kubeconform /usr/local/bin/kubeconform
+
+          curl -sSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+          sudo install kustomize /usr/local/bin/kustomize
+
+          curl -sSL https://get.helm.sh/helm-v3.16.2-linux-amd64.tar.gz -o /tmp/helm.tar.gz
+          tar -xzf /tmp/helm.tar.gz -C /tmp
+          sudo install /tmp/linux-amd64/helm /usr/local/bin/helm
+
+          curl -sSL -o /tmp/kube-linter.tar.gz https://github.com/stackrox/kube-linter/releases/download/v0.7.3/kube-linter-linux.tar.gz
+          tar -xzf /tmp/kube-linter.tar.gz -C /tmp
+          sudo install /tmp/kube-linter /usr/local/bin/kube-linter
+
+      - name: Validate raw manifests with kubeconform
+        run: |
+          if find sources clusters -type f \( -name '*.yaml' -o -name '*.yml' \) | grep -q .; then
+            find sources clusters -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 \
+              | xargs -0 kubeconform -summary -strict -ignore-missing-schemas
+          fi
+
+      - name: Validate kustomize sources
+        run: |
+          while IFS= read -r kustomization; do
+            source_dir="$(dirname "${kustomization}")"
+            kustomize build "${source_dir}" | kubeconform -summary -strict -ignore-missing-schemas
+          done < <(find sources -type f -name 'kustomization.yaml' | sort)
+
+      - name: Lint helm charts
+        run: |
+          while IFS= read -r chart_file; do
+            chart_dir="$(dirname "${chart_file}")"
+            helm lint --strict "${chart_dir}"
+          done < <(find sources -type f -name 'Chart.yaml' | sort)
+
+      - name: Run kube-linter
+        run: kube-linter lint sources/app-of-apps sources/app-projects clusters --config .kube-linter.yaml
+
+  adr-compliance:
+    name: ADR Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Run ADR compliance checks
+        run: bash .github/scripts/adr-compliance.sh
+
+  d2-check:
+    name: D2 Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install d2
+        run: |
+          curl -fsSL https://d2lang.com/install.sh | sh -s --
+          echo "${HOME}/.d2/bin" >> "${GITHUB_PATH}"
+
+      - name: Check D2 formatting
+        run: |
+          if [ -d docs/diagrams/src ]; then
+            find docs/diagrams/src -type f -name '*.d2' -print0 | xargs -0 -r d2 fmt --check
+          fi

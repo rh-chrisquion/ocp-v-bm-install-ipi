@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rosa-hcp-hub-terraform-source
+  namespace: openshift-gitops
+data:
+  purpose: "Terraform source for ROSA HCP central management hub deployment"
+  terraformRoot: "terraform"

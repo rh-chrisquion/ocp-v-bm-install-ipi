@@ -1,0 +1,7 @@
+spec:
+  destination:
+    namespace: hpe-storage
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true

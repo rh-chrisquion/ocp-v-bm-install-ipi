@@ -1,0 +1,33 @@
+# Deployed one sync-wave after the Subscriptions so the NodeHealthCheck and
+# SelfNodeRemediationTemplate CRDs have time to land. If the very first sync
+# fails because a CRD isn't registered yet, Argo CD's automated selfHeal will
+# retry it on the next reconciliation without any manual action.
+#
+# All 5 ocpv420 nodes are combined control-plane/worker (masters schedulable,
+# no dedicated workers), so there is no "safe" node subset to exclude from
+# remediation. This is accepted for this lab: 5-node etcd quorum tolerates up
+# to 2 simultaneous member losses, so fencing any single node is safe.
+apiVersion: remediation.medik8s.io/v1alpha1
+kind: NodeHealthCheck
+metadata:
+  name: ocpv420-combined-nodes
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  selector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+  minHealthy: 60%
+  unhealthyConditions:
+    - type: Ready
+      status: "False"
+      duration: 300s
+    - type: Ready
+      status: Unknown
+      duration: 300s
+  remediationTemplate:
+    apiVersion: self-node-remediation.medik8s.io/v1alpha1
+    kind: SelfNodeRemediationTemplate
+    name: self-node-remediation-automatic-strategy-template
+    namespace: openshift-workload-availability

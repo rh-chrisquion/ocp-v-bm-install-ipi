@@ -1,0 +1,7 @@
+spec:
+  destination:
+    namespace: openshift-workload-availability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

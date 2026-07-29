@@ -1,0 +1,12 @@
+# Deployed one sync-wave after the Subscription so the HyperConverged CRD has
+# time to land before Argo CD tries to apply this CR. If the very first sync
+# fails because the CRD isn't registered yet, Argo CD's automated selfHeal
+# will retry it on the next reconciliation without any manual action.
+apiVersion: hco.kubevirt.io/v1beta1
+kind: HyperConverged
+metadata:
+  name: kubevirt-hyperconverged
+  namespace: openshift-cnv
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec: {}

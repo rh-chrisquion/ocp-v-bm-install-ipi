@@ -1,0 +1,16 @@
+# Deployed one sync-wave after the Subscription so the HPECSIDriver CRD has
+# time to land before Argo CD tries to apply this CR. If the very first sync
+# fails because the CRD isn't registered yet (and, for this operator, because
+# the InstallPlan is still awaiting manual approval — see subscription.yaml),
+# Argo CD's automated selfHeal will retry it on the next reconciliation.
+#
+# No customizations needed to start: an empty spec uses the operator's
+# defaults for all CSPs (Alletra/Nimble/Primera/3PAR) and image references.
+apiVersion: storage.hpe.com/v1
+kind: HPECSIDriver
+metadata:
+  name: hpecsidriver-sample
+  namespace: hpe-storage
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec: {}

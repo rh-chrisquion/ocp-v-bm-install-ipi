@@ -1,0 +1,13 @@
+# No pinned install-plan CSV version per repo convention (AGENTS.md) —
+# installPlanApproval: Automatic tracks the latest CSV published on the channel.
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: hco-operatorhub
+  namespace: openshift-cnv
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: kubevirt-hyperconverged
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

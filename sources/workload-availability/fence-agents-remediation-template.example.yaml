@@ -1,0 +1,49 @@
+# EXAMPLE ONLY — intentionally NOT listed in kustomization.yaml, so Argo CD
+# never applies this file. It is a reference for switching from Self Node
+# Remediation (self-fencing, no credentials needed) to real out-of-band BMC
+# power fencing via Redfish, using the same bmc_address/bmc_username/
+# bmc_password data already recorded per node in
+# sources/ocp-baremetal-bootstrap/inventories/lab/group_vars/all.local.yml
+# (gitignored, never committed — see that file for why).
+#
+# To activate:
+#   1. For each node, create a Secret in openshift-workload-availability with
+#      that node's BMC username/password, e.g.:
+#        oc create secret generic <hostname>-bmc-secret \
+#          -n openshift-workload-availability \
+#          --from-literal=username=<bmc_username> \
+#          --from-literal=password=<bmc_password>
+#      Do NOT commit these secrets to git.
+#   2. Fill in the real per-node BMC addresses under nodeParameters below
+#      (replace the <...> placeholders) and the nodeSecretNames map.
+#   3. Add this file to kustomization.yaml.
+#   4. Update sources/workload-availability/nodehealthcheck.yaml's
+#      remediationTemplate to reference this FenceAgentsRemediationTemplate
+#      instead of the SelfNodeRemediationTemplate.
+apiVersion: fence-agents-remediation.medik8s.io/v1alpha1
+kind: FenceAgentsRemediationTemplate
+metadata:
+  name: fence-redfish-bmc
+  namespace: openshift-workload-availability
+spec:
+  template:
+    spec:
+      agent: fence_redfish
+      sharedparameters:
+        '--action': reboot
+        '--lanplus': ''
+        '--ssl-insecure': ''
+      nodeparameters:
+        '--ip':
+          <node-1-hostname>: <node-1-bmc-address>
+          <node-2-hostname>: <node-2-bmc-address>
+          <node-3-hostname>: <node-3-bmc-address>
+          <node-4-hostname>: <node-4-bmc-address>
+          <node-5-hostname>: <node-5-bmc-address>
+      nodeSecretNames:
+        <node-1-hostname>: <node-1-hostname>-bmc-secret
+        <node-2-hostname>: <node-2-hostname>-bmc-secret
+        <node-3-hostname>: <node-3-hostname>-bmc-secret
+        <node-4-hostname>: <node-4-hostname>-bmc-secret
+        <node-5-hostname>: <node-5-hostname>-bmc-secret
+      retrycount: '5'

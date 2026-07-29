@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openshift-virtualization-source
+  namespace: openshift-gitops
+data:
+  purpose: "OpenShift Virtualization (KubeVirt) operator, required to run test VMs for on-prem cluster validation"
+  scope: "on-prem clusters that host VM-based workloads or validation test VMs"

@@ -1,0 +1,19 @@
+# No pinned install-plan CSV version per repo convention (AGENTS.md).
+#
+# installPlanApproval: Manual is HPE's explicit guidance for this operator
+# ("Do not under any circumstance enable Automatic Updates") — upgrades
+# require following version-specific pre-req steps first. A human (or a
+# pipeline that has run those steps) must approve the InstallPlan:
+#   oc -n hpe-storage patch $(oc get installplans -n hpe-storage -o name) \
+#     -p '{"spec":{"approved":true}}' --type merge
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: hpe-csi-operator
+  namespace: hpe-storage
+spec:
+  channel: stable
+  installPlanApproval: Manual
+  name: hpe-csi-operator
+  source: certified-operators
+  sourceNamespace: openshift-marketplace

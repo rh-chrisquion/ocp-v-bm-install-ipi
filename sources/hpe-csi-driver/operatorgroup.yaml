@@ -1,0 +1,8 @@
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: hpe-csi-driver-for-kubernetes
+  namespace: hpe-storage
+spec:
+  targetNamespaces:
+    - hpe-storage

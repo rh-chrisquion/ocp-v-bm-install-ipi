@@ -1,0 +1,7 @@
+spec:
+  destination:
+    namespace: openshift-cnv
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

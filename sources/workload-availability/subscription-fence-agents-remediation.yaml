@@ -1,0 +1,17 @@
+# No pinned install-plan CSV version per repo convention (AGENTS.md).
+# Installed for the optional upgrade path to real out-of-band BMC/Redfish
+# power fencing — see fence-agents-remediation-template.example.yaml and
+# docs/runbooks/on-prem-cluster-validation.md. Not wired into
+# nodehealthcheck.yaml by default because it requires per-node BMC credential
+# Secrets that must not be committed to git (see the example file).
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: fence-agents-remediation-operator
+  namespace: openshift-workload-availability
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: fence-agents-remediation
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

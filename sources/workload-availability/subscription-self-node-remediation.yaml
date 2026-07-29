@@ -1,0 +1,16 @@
+# No pinned install-plan CSV version per repo convention (AGENTS.md).
+# Self Node Remediation (SNR) is the default remediation provider wired up in
+# nodehealthcheck.yaml: it needs no BMC credentials (self-fencing via the
+# node's own watchdog/API-server-unreachable heuristic), so it works
+# out of the box once installed.
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: self-node-remediation-operator
+  namespace: openshift-workload-availability
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: self-node-remediation
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

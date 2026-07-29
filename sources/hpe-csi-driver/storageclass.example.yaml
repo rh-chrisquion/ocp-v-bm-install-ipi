@@ -1,0 +1,40 @@
+# EXAMPLE ONLY — intentionally NOT listed in kustomization.yaml, so Argo CD
+# never applies this file. StorageClass parameters are backend-specific
+# (Alletra 5000/6000/9000, Alletra Storage MP, Nimble, Primera, 3PAR) — see
+# https://scod.hpedev.io/csi_driver/ for the exact parameter set for the
+# array model actually attached to ocpv420.
+#
+# To activate:
+#   1. Create a Secret with the backend's management credentials. Never
+#      commit this to git:
+#        oc create secret generic hpe-backend-secret -n hpe-storage \
+#          --from-literal=username=<array-username> \
+#          --from-literal=password=<array-password> \
+#          --from-literal=serviceName=<csp-service-name> \
+#          --from-literal=servicePort=<csp-service-port> \
+#          --from-literal=backend=<array-management-ip>
+#   2. Replace the placeholders below with real values for the array model.
+#   3. Add this file to kustomization.yaml.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: hpe-standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: csi.hpe.com
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+parameters:
+  csi.storage.k8s.io/provisioner-secret-name: hpe-backend-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: hpe-storage
+  csi.storage.k8s.io/controller-publish-secret-name: hpe-backend-secret
+  csi.storage.k8s.io/controller-publish-secret-namespace: hpe-storage
+  csi.storage.k8s.io/controller-expand-secret-name: hpe-backend-secret
+  csi.storage.k8s.io/controller-expand-secret-namespace: hpe-storage
+  csi.storage.k8s.io/node-publish-secret-name: hpe-backend-secret
+  csi.storage.k8s.io/node-publish-secret-namespace: hpe-storage
+  csi.storage.k8s.io/node-stage-secret-name: hpe-backend-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: hpe-storage
+  csi.storage.k8s.io/fstype: xfs
+  description: "Volume created by the HPE CSI Driver for Kubernetes"

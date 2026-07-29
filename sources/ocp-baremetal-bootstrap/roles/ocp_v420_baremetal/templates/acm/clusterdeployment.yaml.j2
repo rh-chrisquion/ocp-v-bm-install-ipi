@@ -1,0 +1,22 @@
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: {{ ocp_cluster_name }}
+  namespace: {{ ocp_acm_namespace }}
+spec:
+  baseDomain: {{ ocp_base_domain }}
+  clusterName: {{ ocp_cluster_name }}
+  controlPlaneConfig:
+    servingCertificates: {}
+  clusterInstallRef:
+    group: extensions.hive.openshift.io
+    kind: AgentClusterInstall
+    name: {{ ocp_cluster_name }}
+    version: v1beta1
+  platform:
+    agentBareMetal:
+      agentSelector:
+        matchLabels:
+          infraenvs.agent-install.openshift.io: {{ ocp_cluster_name }}
+  pullSecretRef:
+    name: {{ ocp_acm_pull_secret_name }}

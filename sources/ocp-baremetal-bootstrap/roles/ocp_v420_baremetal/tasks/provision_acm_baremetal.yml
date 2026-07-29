@@ -1,0 +1,128 @@
+- name: Validate ACM/BMC connection details for each node
+  ansible.builtin.assert:
+    that:
+      - node.bmc_address is defined
+      - node.bmc_username is defined
+      - node.bmc_password is defined
+    fail_msg: >-
+      Node {{ node.hostname | default('unknown') }} is missing BMC connection
+      details (bmc_address, bmc_username, bmc_password). These are required so
+      ACM's Bare Metal Operator can power-manage and boot the host.
+  loop: "{{ ocp_nodes }}"
+  loop_control:
+    loop_var: node
+    label: "{{ node.hostname | default('unknown') }}"
+
+- name: Validate ACM release image is set when ClusterImageSet is managed here
+  ansible.builtin.assert:
+    that:
+      - (ocp_release_image | default('') | trim | length) > 0
+    fail_msg: >-
+      ocp_release_image must be set to generate the ClusterImageSet consumed
+      by AgentClusterInstall, or set ocp_acm_manage_cluster_image_set: false
+      to reuse a ClusterImageSet that already exists on the hub.
+  when: ocp_acm_manage_cluster_image_set | bool
+
+- name: Ensure ACM manifest output directory exists
+  ansible.builtin.file:
+    path: "{{ ocp_output_dir }}/acm"
+    state: directory
+    mode: "0750"
+
+- name: Generate cluster namespace manifest
+  ansible.builtin.template:
+    src: acm/namespace.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/namespace.yaml"
+    mode: "0640"
+
+- name: Generate pull-secret manifest
+  ansible.builtin.template:
+    src: acm/pull-secret.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/pull-secret.yaml"
+    mode: "0640"
+
+- name: Generate ClusterImageSet manifest
+  ansible.builtin.template:
+    src: acm/cluster-image-set.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/cluster-image-set.yaml"
+    mode: "0640"
+  when: ocp_acm_manage_cluster_image_set | bool
+
+- name: Generate per-node BMC credential secrets
+  ansible.builtin.template:
+    src: acm/bmc-secret.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/bmc-secret-{{ node.hostname }}.yaml"
+    mode: "0640"
+  loop: "{{ ocp_nodes }}"
+  loop_control:
+    loop_var: node
+    label: "{{ node.hostname }}"
+
+- name: Generate per-node BareMetalHost manifests
+  ansible.builtin.template:
+    src: acm/baremetalhost.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/baremetalhost-{{ node.hostname }}.yaml"
+    mode: "0640"
+  loop: "{{ ocp_nodes }}"
+  loop_control:
+    loop_var: node
+    label: "{{ node.hostname }}"
+
+- name: Generate per-node NMStateConfig manifests
+  ansible.builtin.template:
+    src: acm/nmstateconfig.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/nmstateconfig-{{ node.hostname }}.yaml"
+    mode: "0640"
+  loop: "{{ ocp_nodes }}"
+  loop_control:
+    loop_var: node
+    label: "{{ node.hostname }}"
+
+- name: Generate InfraEnv manifest
+  ansible.builtin.template:
+    src: acm/infraenv.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/infraenv.yaml"
+    mode: "0640"
+
+- name: Generate ClusterDeployment manifest
+  ansible.builtin.template:
+    src: acm/clusterdeployment.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/clusterdeployment.yaml"
+    mode: "0640"
+
+- name: Generate AgentClusterInstall manifest
+  ansible.builtin.template:
+    src: acm/agentclusterinstall.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/agentclusterinstall.yaml"
+    mode: "0640"
+
+- name: Generate day-0 integrity manifests ConfigMap referenced by AgentClusterInstall
+  ansible.builtin.template:
+    src: acm/extra-manifests-configmap.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/extra-manifests-configmap.yaml"
+    mode: "0640"
+  when: ocp_integrity_enabled | bool
+
+- name: Generate ManagedCluster manifest for ACM import
+  ansible.builtin.template:
+    src: acm/managedcluster.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/managedcluster.yaml"
+    mode: "0640"
+  when: ocp_acm_auto_import_enabled | bool
+
+- name: Generate KlusterletAddonConfig manifest for ACM import
+  ansible.builtin.template:
+    src: acm/klusterletaddonconfig.yaml.j2
+    dest: "{{ ocp_output_dir }}/acm/klusterletaddonconfig.yaml"
+    mode: "0640"
+  when: ocp_acm_auto_import_enabled | bool
+
+- name: Show ACM bare-metal provisioning artifact locations
+  ansible.builtin.debug:
+    msg:
+      - "Generated ACM Central Infrastructure Management manifests in {{ ocp_output_dir }}/acm"
+      - "Apply the namespace first, then the rest of the manifests, against the ACM hub:"
+      - "  oc apply -f {{ ocp_output_dir }}/acm/namespace.yaml"
+      - "  oc apply -f {{ ocp_output_dir }}/acm/"
+      - "Track discovery/provisioning with:"
+      - "  oc get agent,baremetalhost,agentclusterinstall -n {{ ocp_acm_namespace }}"

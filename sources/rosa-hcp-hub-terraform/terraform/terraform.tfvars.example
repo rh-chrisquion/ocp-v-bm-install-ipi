@@ -6,10 +6,10 @@ cluster_name      = "example-rosa-hub-hcp"
 openshift_version = "4.22.0"
 
 # AWS placement
-aws_region             = "us-east-1"
-aws_availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+aws_region             = "us-east-2"
+aws_availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
 aws_subnet_ids         = ["subnet-aaaaaaaa", "subnet-bbbbbbbb", "subnet-cccccccc"]
-machine_cidr           = "10.0.0.0/16"
+machine_cidr           = "10.200.0.0/16"
 
 # STS role/OIDC settings (module-managed)
 account_role_prefix  = "example-rosa-hub"
@@ -20,10 +20,10 @@ compute_machine_type = "m5.2xlarge"
 replicas             = 6
 
 # Autoscaling for HCP worker pools
-# Set min_replicas_per_pool = 0 to allow scale-to-zero behavior.
+# Hub HA baseline for ACM+AAP+Argo CD: 2 workers per AZ (3 AZ => 6 total min).
 enable_autoscaled_machine_pools = true
-min_replicas_per_pool           = 0
-max_replicas_per_pool           = 8
+min_replicas_per_pool           = 2
+max_replicas_per_pool           = 6
 
 tags = {
   environment = "example"

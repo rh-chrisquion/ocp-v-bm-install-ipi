@@ -1,0 +1,40 @@
+apiVersion: extensions.hive.openshift.io/v1beta1
+kind: AgentClusterInstall
+metadata:
+  name: {{ ocp_cluster_name }}
+  namespace: {{ ocp_acm_namespace }}
+spec:
+  clusterDeploymentRef:
+    name: {{ ocp_cluster_name }}
+  imageSetRef:
+    name: {{ ocp_acm_cluster_image_set_name }}
+  provisionRequirements:
+    controlPlaneAgents: {{ ocp_control_plane_replicas }}
+    workerAgents: {{ ocp_worker_replicas }}
+  networking:
+    userManagedNetworking: false
+    machineNetwork:
+      - cidr: {{ ocp_machine_network_cidr }}
+    clusterNetwork:
+{% for network in ocp_cluster_networks %}
+      - cidr: {{ network.cidr }}
+        hostPrefix: {{ network.host_prefix }}
+{% endfor %}
+    serviceNetwork:
+{% for service_network in ocp_service_networks %}
+      - {{ service_network }}
+{% endfor %}
+  apiVIP: {{ ocp_api_vip }}
+  apiVIPs:
+    - {{ ocp_api_vip }}
+  ingressVIP: {{ ocp_ingress_vip }}
+  ingressVIPs:
+    - {{ ocp_ingress_vip }}
+  sshPublicKey: '{{ ocp_ssh_public_key }}'
+{% if ocp_schedulable_masters | default(false) | bool %}
+  mastersSchedulable: true
+{% endif %}
+{% if ocp_integrity_enabled | bool %}
+  manifestsConfigMapRefs:
+    - name: {{ ocp_cluster_name }}-day0-integrity-manifests
+{% endif %}

@@ -88,15 +88,15 @@ variable "enable_autoscaled_machine_pools" {
 }
 
 variable "min_replicas_per_pool" {
-  description = "Minimum replicas per machine pool when autoscaling is enabled (set 0 for scale-to-zero behavior)."
+  description = "Minimum replicas per machine pool when autoscaling is enabled (recommend >=2 for ACM+AAP+Argo CD hub HA)."
   type        = number
-  default     = 0
+  default     = 2
 }
 
 variable "max_replicas_per_pool" {
   description = "Maximum replicas per machine pool when autoscaling is enabled."
   type        = number
-  default     = 8
+  default     = 6
 }
 
 variable "tags" {

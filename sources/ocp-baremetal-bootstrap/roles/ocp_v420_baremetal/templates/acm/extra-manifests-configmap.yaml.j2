@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ ocp_cluster_name }}-day0-integrity-manifests
+  namespace: {{ ocp_acm_namespace }}
+data:
+  99-control-plane-performanceprofile.yaml: |
+{{ lookup('ansible.builtin.template', 'openshift/99-control-plane-performanceprofile.yaml.j2') | indent(4, True) }}
+  99-control-plane-kubeletconfig.yaml: |
+{{ lookup('ansible.builtin.template', 'openshift/99-control-plane-kubeletconfig.yaml.j2') | indent(4, True) }}
+  99-priorityclasses.yaml: |
+{{ lookup('ansible.builtin.template', 'openshift/99-priorityclasses.yaml.j2') | indent(4, True) }}
+  99-namespace-guardrails.yaml: |
+{{ lookup('ansible.builtin.template', 'openshift/99-namespace-guardrails.yaml.j2') | indent(4, True) }}
+  99-workload-placement-contract.yaml: |
+{{ lookup('ansible.builtin.template', 'openshift/99-workload-placement-contract.yaml.j2') | indent(4, True) }}
+  99-integrity-validating-admission.yaml: |
+{{ lookup('ansible.builtin.template', 'openshift/99-integrity-validating-admission.yaml.j2') | indent(4, True) }}

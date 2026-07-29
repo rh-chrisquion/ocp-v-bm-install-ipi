@@ -1,0 +1,25 @@
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: {{ node.hostname }}
+  namespace: {{ ocp_acm_namespace }}
+  labels:
+    infraenvs.agent-install.openshift.io: {{ ocp_cluster_name }}
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: {{ node.hostname }}
+    bmac.agent-install.openshift.io/role: "{{ 'master' if node.role == 'master' else 'worker' }}"
+spec:
+  online: true
+  bootMACAddress: "{{ node.boot_mac_address }}"
+  automatedCleaningMode: {{ ocp_acm_automated_cleaning_mode }}
+  bmc:
+    address: "{{ node.bmc_address }}"
+    credentialsName: {{ node.hostname }}-bmc-secret
+    disableCertificateVerification: {{ ocp_acm_bmc_disable_certificate_verification | bool | lower }}
+{% if node.root_device_hints is defined %}
+  rootDeviceHints:
+{% for hint_key, hint_value in node.root_device_hints.items() %}
+    {{ hint_key }}: {{ hint_value }}
+{% endfor %}
+{% endif %}

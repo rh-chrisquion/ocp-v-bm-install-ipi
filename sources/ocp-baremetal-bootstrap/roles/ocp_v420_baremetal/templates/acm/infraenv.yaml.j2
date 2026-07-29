@@ -1,0 +1,22 @@
+apiVersion: agent-install.openshift.io/v1beta1
+kind: InfraEnv
+metadata:
+  name: {{ ocp_cluster_name }}
+  namespace: {{ ocp_acm_namespace }}
+spec:
+  clusterRef:
+    name: {{ ocp_cluster_name }}
+    namespace: {{ ocp_acm_namespace }}
+  pullSecretRef:
+    name: {{ ocp_acm_pull_secret_name }}
+  sshAuthorizedKey: '{{ ocp_ssh_public_key }}'
+  nmStateConfigLabelSelector:
+    matchLabels:
+      infraenvs.agent-install.openshift.io: {{ ocp_cluster_name }}
+  agentLabelSelector:
+    matchLabels:
+      infraenvs.agent-install.openshift.io: {{ ocp_cluster_name }}
+  additionalNTPSources:
+{% for ntp in ocp_ntp_sources %}
+    - {{ ntp }}
+{% endfor %}

@@ -1,0 +1,12 @@
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: {{ ocp_cluster_name }}
+  labels:
+    name: {{ ocp_cluster_name }}
+    cloud: BareMetal
+    vendor: OpenShift
+    gitops.openshift.io/deployment-model: onprem-combined
+    gitops.openshift.io/control-compute: "true"
+spec:
+  hubAcceptsClient: true

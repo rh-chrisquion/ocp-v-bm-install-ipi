@@ -1,0 +1,98 @@
+- name: Generate install-config.yaml
+  ansible.builtin.template:
+    src: install-config.yaml.j2
+    dest: "{{ ocp_output_dir }}/install-config.yaml"
+    mode: "0640"
+
+- name: Generate agent-config.yaml
+  ansible.builtin.template:
+    src: agent-config.yaml.j2
+    dest: "{{ ocp_output_dir }}/agent-config.yaml"
+    mode: "0640"
+
+- name: Ensure additional manifest directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0750"
+  loop:
+    - "{{ ocp_output_dir }}/openshift"
+    - "{{ ocp_output_dir }}/cluster-manifests"
+  when: ocp_integrity_enabled | bool
+
+- name: Check openshift-install availability for cluster-manifests generation
+  ansible.builtin.command: /usr/bin/env openshift-install version
+  register: ocp_openshift_install_check
+  changed_when: false
+  failed_when: false
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+
+- name: Fail when openshift-install is unavailable for manifest generation
+  ansible.builtin.assert:
+    that:
+      - ocp_openshift_install_check.rc == 0
+    fail_msg: >-
+      openshift-install is required for day-0 cluster-manifests generation.
+      Install openshift-install and rerun this playbook.
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+
+- name: Generate cluster-manifests from installer inputs
+  ansible.builtin.command: "openshift-install agent create cluster-manifests --dir {{ ocp_output_dir }}"
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+    - ocp_openshift_install_check.rc == 0
+
+- name: Ensure agent-cluster-install makes control-plane schedulable
+  ansible.builtin.lineinfile:
+    path: "{{ ocp_output_dir }}/cluster-manifests/agent-cluster-install.yaml"
+    regexp: "^  mastersSchedulable:"
+    line: "  mastersSchedulable: true"
+    insertafter: "^spec:"
+  when:
+    - ocp_integrity_enabled | bool
+    - ocp_integrity_generate_cluster_manifests | bool
+    - ocp_schedulable_masters | default(false) | bool
+
+- name: Generate day-0 integrity manifests (performance, kubelet, placement, admission)
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ ocp_output_dir }}/openshift/{{ item.dest }}"
+    mode: "0640"
+  loop:
+    - src: openshift/99-control-plane-performanceprofile.yaml.j2
+      dest: 99-control-plane-performanceprofile.yaml
+    - src: openshift/99-control-plane-kubeletconfig.yaml.j2
+      dest: 99-control-plane-kubeletconfig.yaml
+    - src: openshift/99-priorityclasses.yaml.j2
+      dest: 99-priorityclasses.yaml
+    - src: openshift/99-namespace-guardrails.yaml.j2
+      dest: 99-namespace-guardrails.yaml
+    - src: openshift/99-workload-placement-contract.yaml.j2
+      dest: 99-workload-placement-contract.yaml
+    - src: openshift/99-integrity-validating-admission.yaml.j2
+      dest: 99-integrity-validating-admission.yaml
+  when: ocp_integrity_enabled | bool
+
+- name: Show generated artifact locations
+  ansible.builtin.debug:
+    msg:
+      - "Generated {{ ocp_output_dir }}/install-config.yaml"
+      - "Generated {{ ocp_output_dir }}/agent-config.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-control-plane-performanceprofile.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-control-plane-kubeletconfig.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-namespace-guardrails.yaml"
+      - "Generated {{ ocp_output_dir }}/openshift/99-integrity-validating-admission.yaml"
+
+- name: Show control-plane schedulable note for agent-based flow
+  ansible.builtin.debug:
+    msg:
+      - "The install-config.yaml no longer accepts mastersSchedulable in newer OpenShift releases."
+      - "This role now writes day-0 integrity manifests and sets spec.mastersSchedulable in cluster-manifests/agent-cluster-install.yaml."
+      - "Rebuild the ISO after manifest generation:"
+      - "  openshift-install agent create image --dir {{ ocp_output_dir }}"
+  when: ocp_schedulable_masters | default(false) | bool

@@ -21,18 +21,42 @@ variable "aws_region" {
 }
 
 variable "aws_subnet_ids" {
-  description = "Private subnet IDs for worker placement."
+  description = "Private subnet IDs for worker placement. When empty and enable_vpc_discovery is true, these are auto-discovered from AWS."
   type        = list(string)
+  default     = []
 }
 
 variable "aws_availability_zones" {
-  description = "Availability zones that map to aws_subnet_ids."
+  description = "Availability zones that map to aws_subnet_ids. When empty and enable_vpc_discovery is true, these are auto-discovered from AWS."
   type        = list(string)
+  default     = []
 }
 
 variable "machine_cidr" {
-  description = "Machine network CIDR used during cluster installation."
+  description = "Machine network CIDR used during cluster installation. When null and enable_vpc_discovery is true, this is auto-discovered from AWS."
   type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "enable_vpc_discovery" {
+  description = "When true, auto-discover the VPC, private subnet IDs, availability zones, and machine CIDR from AWS via tags instead of requiring aws_subnet_ids/aws_availability_zones/machine_cidr to be set explicitly. Explicit values always take precedence over discovered ones."
+  type        = bool
+  default     = true
+}
+
+variable "network_name" {
+  description = "Name prefix used to locate the VPC by its Name tag (\"$${network_name}-vpc\") during auto-discovery. Must match the network_name used in the sibling rosa-hcp-network-terraform stack."
+  type        = string
+  default     = "rosa-hcp-hub-network"
+}
+
+variable "private_subnet_selector_tags" {
+  description = "Tags used to select private worker subnets within the discovered VPC during auto-discovery."
+  type        = map(string)
+  default = {
+    Attributes = "private"
+  }
 }
 
 variable "private_cluster" {

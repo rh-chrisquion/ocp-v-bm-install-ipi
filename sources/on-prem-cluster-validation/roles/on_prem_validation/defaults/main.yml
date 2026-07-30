@@ -1,0 +1,73 @@
+# Single source of truth for node/BMC/bond data: reuse
+# sources/ocp-baremetal-bootstrap's gitignored local values file instead of
+# duplicating cluster inventory (AGENTS.md: "no duplicated per-tool trees for
+# same app"). That file defines ocp_nodes, ocp_network_bonds, and per-node
+# bmc_address/bmc_username/bmc_password.
+on_prem_validation_local_values_file: >-
+  {{ playbook_dir }}/../ocp-baremetal-bootstrap/inventories/lab/group_vars/all.local.yml
+on_prem_validation_local_values_required: true
+
+# Namespace test resources (VM, benchmark pods) are created in. Matches
+# docs/runbooks/on-prem-cluster-validation.md.
+on_prem_validation_namespace: default
+
+# Where generated results reports are written (gitignored — see .gitignore).
+on_prem_validation_results_dir: "{{ playbook_dir }}/results"
+
+# Safety switch: tasks that mutate live infrastructure (taking a bond member
+# down, powering a node off via BMC/Redfish, scaling remediation operators to
+# zero) refuse to run unless this is explicitly set to true, e.g.:
+#   ansible-playbook site.yml -e on_prem_validation_confirm_destructive=true
+on_prem_validation_confirm_destructive: false
+
+# Delete test resources (VM, benchmark pods) created by this run once its
+# tagged section(s) complete.
+on_prem_validation_cleanup: true
+
+# --- etcd test (tag: etcd) ---
+on_prem_validation_etcd_namespace: openshift-etcd
+on_prem_validation_etcd_fsync_p99_threshold_ms: 10
+on_prem_validation_etcd_rtt_p99_threshold_ms: 50
+on_prem_validation_etcd_load_test_object_count: 200
+on_prem_validation_etcd_max_not_ready_nodes: 0
+on_prem_validation_etcd_min_healthy_members: 4 # out of 5 for ocpv420's compact quorum
+
+# --- network bond test (tag: network) ---
+# Keys into ocp_network_bonds (from the shared bootstrap inventory).
+on_prem_validation_bonds_to_test:
+  - data
+  - storage
+  - multicast
+# Only the first bond gets the full ping+iperf3 throughput treatment; the
+# rest get a lighter ping-only pass, per the runbook.
+on_prem_validation_network_full_test_bond: data
+on_prem_validation_network_node_a_index: 0
+on_prem_validation_network_node_b_index: 1
+on_prem_validation_network_ping_count: 20
+on_prem_validation_network_iperf_image: networkstatic/iperf3
+on_prem_validation_network_iperf_duration_seconds: 30
+on_prem_validation_network_link_recovery_wait_seconds: 10
+
+# --- VM setup / live migration test (tags: migration, failover) ---
+on_prem_validation_vm_name: validation-test-vm
+on_prem_validation_vm_storage_class: hpe-standard
+on_prem_validation_vm_disk_size: 10Gi
+on_prem_validation_vm_boot_source_kind: DataSource
+on_prem_validation_vm_boot_source_name: fedora
+on_prem_validation_vm_boot_source_namespace: openshift-virtualization-os-images
+on_prem_validation_vm_ready_timeout_seconds: 300
+on_prem_validation_vm_migration_timeout_seconds: 600
+on_prem_validation_vm_ping_count: 60
+
+# --- node hard failure / VM failover test (tag: failover) ---
+on_prem_validation_run_baseline_failover: true
+on_prem_validation_run_remediated_failover: true
+on_prem_validation_nhc_namespace: openshift-workload-availability
+on_prem_validation_nhc_deployment: node-healthcheck-controller-manager
+# Wall-clock ceiling while polling for the VM to reappear (the baseline run
+# with remediation disabled can legitimately take the default ~5-6 minute
+# NotReady toleration, or never resolve — see the runbook).
+on_prem_validation_failover_baseline_timeout_seconds: 900
+on_prem_validation_failover_remediated_timeout_seconds: 600
+on_prem_validation_bmc_reset_type_off: ForceOff
+on_prem_validation_bmc_reset_type_on: "On"

@@ -1,0 +1,16 @@
+# This source is Ansible tooling (like sources/ocp-baremetal-bootstrap), not a
+# reconciled Argo CD Application — there is deliberately no
+# clusters/<cluster>/on-prem-cluster-validation.yaml gate file. The playbook
+# runs imperative, sometimes destructive actions (powering off a node) that
+# must never be auto-synced/self-healed by GitOps.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: on-prem-cluster-validation-source
+  namespace: openshift-gitops
+data:
+  purpose: >-
+    Ansible automation of docs/runbooks/on-prem-cluster-validation.md: etcd
+    stability/latency, bonded-NIC failure resiliency, VM live migration, and
+    hard node-failure VM failover, against the ocpv420 compact cluster.
+  scope: "operator-run validation tooling, not a GitOps-reconciled application"

@@ -1,0 +1,80 @@
+- name: Check shared bootstrap inventory file presence
+  ansible.builtin.stat:
+    path: "{{ on_prem_validation_local_values_file }}"
+  register: on_prem_validation_local_values_file_stat
+  tags: always
+
+- name: Require shared bootstrap inventory file
+  ansible.builtin.assert:
+    that:
+      - on_prem_validation_local_values_file_stat.stat.exists
+    fail_msg: >-
+      {{ on_prem_validation_local_values_file }} is required (it defines
+      ocp_nodes, ocp_network_bonds, and per-node BMC credentials). Create it
+      per sources/ocp-baremetal-bootstrap/README.md before running this
+      playbook — this playbook deliberately does not duplicate that
+      inventory.
+  when: on_prem_validation_local_values_required | bool
+  tags: always
+
+- name: Load shared node/network/BMC values from ocp-baremetal-bootstrap
+  ansible.builtin.include_vars:
+    file: "{{ on_prem_validation_local_values_file }}"
+  when: on_prem_validation_local_values_file_stat.stat.exists
+  tags: always
+
+- name: Validate shared inventory provides required node/network data
+  ansible.builtin.assert:
+    that:
+      - ocp_nodes is defined
+      - ocp_nodes | length > 0
+      - ocp_network_bonds is defined
+    fail_msg: >-
+      ocp_nodes / ocp_network_bonds were not found in
+      {{ on_prem_validation_local_values_file }}.
+  tags: always
+
+- name: Ensure results directory exists
+  ansible.builtin.file:
+    path: "{{ on_prem_validation_results_dir }}"
+    state: directory
+    mode: "0750"
+  tags: always
+
+- name: Record run start time
+  ansible.builtin.set_fact:
+    on_prem_validation_run_id: "{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}"
+  tags: always
+
+- name: Run pre-flight checklist
+  ansible.builtin.include_tasks: preflight.yml
+  tags: [preflight, etcd, network, migration, failover]
+
+- name: Run etcd stability and latency test
+  ansible.builtin.include_tasks: etcd.yml
+  tags: etcd
+
+- name: Run bonded-NIC port failure test
+  ansible.builtin.include_tasks: network_bond.yml
+  tags: network
+
+- name: Create the validation test VM
+  ansible.builtin.include_tasks: vm_setup.yml
+  tags: [migration, failover]
+
+- name: Run VM live migration test
+  ansible.builtin.include_tasks: vm_migration.yml
+  tags: migration
+
+- name: Run worker node hard failure failover test
+  ansible.builtin.include_tasks: vm_failover.yml
+  tags: failover
+
+- name: Clean up validation test VM and benchmark resources
+  ansible.builtin.include_tasks: cleanup.yml
+  tags: [migration, failover, cleanup]
+  when: on_prem_validation_cleanup | bool
+
+- name: Write results report
+  ansible.builtin.include_tasks: report.yml
+  tags: [etcd, network, migration, failover, report]

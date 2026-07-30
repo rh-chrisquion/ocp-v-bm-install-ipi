@@ -10,6 +10,7 @@ cluster that will host ACM, AAP, and optional Argo CD workloads.
 - Upsized workers for hub tooling (`m5.2xlarge` default)
 - Autoscaled machine pools with per-AZ min/max controls
 - Module-aligned implementation using `terraform-redhat/rosa-hcp/rhcs`
+- VPC/subnet/CIDR auto-discovery from AWS by tag (no manual output copying required by default)
 
 ## Terraform roots
 
@@ -29,23 +30,42 @@ terraform apply
 
 cd sources/rosa-hcp-hub-terraform/terraform
 cp terraform.tfvars.example terraform.tfvars
-# Set aws_subnet_ids, aws_availability_zones, and machine_cidr
-# from network stack outputs.
 # Keep aws_region aligned to the network stack region.
+# By default, aws_subnet_ids, aws_availability_zones, and machine_cidr are
+# auto-discovered from AWS (see "VPC/subnet/CIDR auto-discovery" below) as
+# long as network_name matches the network stack.
 terraform init
 terraform plan
 ```
 
 `terraform.tfvars` is gitignored so environment-specific values stay local.
 
-Example output extraction from the network stack:
+## VPC/subnet/CIDR auto-discovery
 
-```bash
-cd sources/rosa-hcp-network-terraform/terraform
-terraform output -json private_subnet_ids
-terraform output -json availability_zones
-terraform output -raw machine_cidr
-```
+By default (`enable_vpc_discovery = true`), this stack looks up its network
+inputs directly from AWS instead of requiring manual copy/paste from the
+network stack's outputs:
+
+- The VPC is found by its `Name` tag: `"${network_name}-vpc"`.
+- Private worker subnets are found within that VPC by
+  `private_subnet_selector_tags` (default `Attributes = "private"`).
+- `machine_cidr` comes from the discovered VPC's CIDR block.
+- `aws_availability_zones` are derived per-subnet, so AZ-to-subnet
+  correspondence is always correct regardless of subnet ID ordering.
+
+This means as long as `network_name` here matches the sibling
+`rosa-hcp-network-terraform` stack's `network_name` (default
+`rosa-hcp-hub-network` in both), and `aws_region` matches, no manual
+`terraform output` extraction is needed. Use `terraform plan` and inspect the
+`discovered_vpc_id`, `effective_subnet_ids`, `effective_availability_zones`,
+and `effective_machine_cidr` outputs to confirm what was resolved.
+
+Any of `aws_subnet_ids`, `aws_availability_zones`, or `machine_cidr` can
+still be set explicitly in `terraform.tfvars` to override auto-discovery for
+that field, which is useful when the VPC isn't managed by the sibling network
+stack (for example, a VPC owned by a separate landing-zone team). Set
+`enable_vpc_discovery = false` to disable auto-discovery entirely and require
+all three values explicitly, matching the previous manual behavior.
 
 ## Notes
 

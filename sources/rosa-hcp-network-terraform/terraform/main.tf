@@ -91,6 +91,7 @@ resource "aws_subnet" "public" {
     {
       Name                     = format("%s-public-%02d", var.network_name, count.index + 1)
       "kubernetes.io/role/elb" = "1"
+      Attributes               = "public"
     }
   )
 }
@@ -108,6 +109,7 @@ resource "aws_subnet" "private" {
     {
       Name                              = format("%s-private-%02d", var.network_name, count.index + 1)
       "kubernetes.io/role/internal-elb" = "1"
+      Attributes                        = "private"
     }
   )
 }

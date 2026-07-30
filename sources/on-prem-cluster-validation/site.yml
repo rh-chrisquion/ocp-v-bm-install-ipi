@@ -1,0 +1,6 @@
+- name: Automate the on-prem cluster validation runbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - role: on_prem_validation

@@ -6,10 +6,25 @@ cluster_name      = "example-rosa-hub-hcp"
 openshift_version = "4.22.0"
 
 # AWS placement
-aws_region             = "us-east-2"
-aws_availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
-aws_subnet_ids         = ["subnet-aaaaaaaa", "subnet-bbbbbbbb", "subnet-cccccccc"]
-machine_cidr           = "10.200.0.0/16"
+aws_region = "us-east-2"
+
+# VPC/subnet/CIDR auto-discovery (default: enabled)
+# By default, aws_subnet_ids, aws_availability_zones, and machine_cidr are
+# auto-discovered from AWS by looking up a VPC tagged Name="${network_name}-vpc"
+# and its subnets tagged per private_subnet_selector_tags (default
+# Attributes="private"). network_name must match the sibling
+# rosa-hcp-network-terraform stack's network_name.
+# network_name          = "rosa-hcp-hub-network"
+# enable_vpc_discovery  = true
+# private_subnet_selector_tags = {
+#   Attributes = "private"
+# }
+
+# Manual override (optional): set these to skip auto-discovery for any field,
+# or set enable_vpc_discovery = false to require them all explicitly.
+# aws_availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
+# aws_subnet_ids         = ["subnet-aaaaaaaa", "subnet-bbbbbbbb", "subnet-cccccccc"]
+# machine_cidr           = "10.200.0.0/16"
 
 # STS role/OIDC settings (module-managed)
 account_role_prefix  = "example-rosa-hub"

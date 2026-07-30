@@ -26,7 +26,19 @@ terraform plan
 terraform apply
 ```
 
-Then use outputs in the ROSA cluster stack:
+By default, `sources/rosa-hcp-hub-terraform` auto-discovers this stack's VPC,
+private subnets, and machine CIDR directly from AWS by tag, as long as its
+`network_name` matches this stack's `network_name` (default
+`rosa-hcp-hub-network` in both) and both stacks target the same `aws_region`.
+No manual output copying is required in that case.
+
+The VPC is tagged `Name = "${network_name}-vpc"`, private subnets are tagged
+`Attributes = "private"` (plus `kubernetes.io/role/internal-elb = "1"`), and
+public subnets are tagged `Attributes = "public"` (plus
+`kubernetes.io/role/elb = "1"`) to support this lookup.
+
+If the ROSA cluster stack's auto-discovery is disabled or overridden, use
+these outputs manually instead:
 
 - `private_subnet_ids` -> `aws_subnet_ids`
 - `availability_zones` -> `aws_availability_zones`

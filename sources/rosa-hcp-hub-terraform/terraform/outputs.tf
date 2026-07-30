@@ -30,7 +30,12 @@ output "discovered_vpc_id" {
 
 output "effective_subnet_ids" {
   description = "Private subnet IDs actually used for worker placement, whether explicit or auto-discovered."
-  value       = local.effective_subnet_ids
+  value       = local.effective_private_subnet_ids
+}
+
+output "effective_cluster_subnet_ids" {
+  description = "Full subnet ID list passed to the cluster resource, including a discovered public subnet when private_cluster is false."
+  value       = local.effective_cluster_subnet_ids
 }
 
 output "effective_availability_zones" {
@@ -41,4 +46,20 @@ output "effective_availability_zones" {
 output "effective_machine_cidr" {
   description = "Machine CIDR actually used for cluster installation, whether explicit or auto-discovered."
   value       = local.effective_machine_cidr
+}
+
+output "htpasswd_admin_username" {
+  description = "Username for the Terraform-managed sandbox htpasswd cluster-admin, when create_htpasswd_admin is true."
+  value       = var.create_htpasswd_admin ? var.htpasswd_admin_username : null
+}
+
+output "htpasswd_admin_password" {
+  description = "Generated password for the Terraform-managed sandbox htpasswd cluster-admin, when create_htpasswd_admin is true. Retrieve with: terraform output -raw htpasswd_admin_password"
+  value       = var.create_htpasswd_admin ? random_password.htpasswd_admin[0].result : null
+  sensitive   = true
+}
+
+output "oidc_idp_enabled" {
+  description = "Whether the OIDC identity provider (for org SSO / Duo-fronted login) is currently configured."
+  value       = var.enable_oidc_idp
 }

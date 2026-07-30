@@ -10,5 +10,9 @@ terraform {
       source  = "terraform-redhat/rhcs"
       version = ">= 1.7.6"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.0"
+    }
   }
 }

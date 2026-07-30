@@ -17,6 +17,11 @@ sources/ocp-baremetal-bootstrap/openshift-install-*.tar.gz
 
 # OS/editor artifacts
 .DS_Store
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
 
 # Terraform plan artifacts can include sensitive infrastructure details
 *.plan

@@ -4,3 +4,8 @@ terraform.tfstate
 terraform.tfstate.backup
 *.tfvars
 !terraform.tfvars.example
+
+# CLI binaries/archives downloaded locally (e.g. `rosa download openshift-client`)
+openshift-client-*.tar.gz
+/oc
+/kubectl

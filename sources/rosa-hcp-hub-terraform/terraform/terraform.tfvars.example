@@ -45,3 +45,23 @@ tags = {
   owner       = "platform-team"
   managed_by  = "terraform"
 }
+
+# --- Identity providers ---
+
+# Sandbox/dev: Terraform-managed htpasswd cluster-admin (default: enabled).
+# Generated password is available via: terraform output -raw htpasswd_admin_password
+# create_htpasswd_admin  = true
+# htpasswd_admin_username = "sandbox-admin"
+
+# Client/production: OIDC IDP fronted by your organization's SSO (Duo 2FA, or
+# whatever MFA your org uses, is enforced by that upstream IdP -- this only
+# registers the cluster as an OIDC relying party of it). Requires an OIDC
+# client already registered against that IdP; set enable_oidc_idp = true and
+# fill these in once you have that registration. Disable create_htpasswd_admin
+# once this is in place for a shared/production cluster.
+# enable_oidc_idp     = true
+# oidc_idp_name       = "corporate-sso"
+# oidc_issuer_url     = "https://sso.example.com/realms/your-realm"
+# oidc_client_id      = "rosa-hub-cluster"
+# oidc_client_secret  = "REPLACE_WITH_OIDC_CLIENT_SECRET"
+# oidc_admin_username = "you@example.com"

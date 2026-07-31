@@ -64,11 +64,26 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.9.8"
+          terraform_version: "latest"
 
       # Three selectable AWS credential paths -- Duo/Secrets Manager is one
       # option, not a hard requirement. Exactly one of the following three
-      # steps runs, based on the aws_auth_method input.
+      # steps runs, based on the aws_auth_method input. Each is preceded by
+      # a pre-flight secret check so a missing secret fails with a clear,
+      # actionable message instead of the AWS action's generic
+      # "Could not load credentials from any providers" error.
+
+      - name: Check required secrets (access_keys)
+        if: ${{ github.event.inputs.aws_auth_method == 'access_keys' }}
+        env:
+          KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          if [ -z "${KEY_ID}" ] || [ -z "${SECRET_KEY}" ]; then
+            echo "::error::aws_auth_method=access_keys requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY repository secrets."
+            echo "::error::Set them with: gh secret set AWS_ACCESS_KEY_ID   and   gh secret set AWS_SECRET_ACCESS_KEY"
+            exit 1
+          fi
 
       - name: Configure AWS credentials (access keys)
         if: ${{ github.event.inputs.aws_auth_method == 'access_keys' }}
@@ -78,6 +93,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ github.event.inputs.aws_region }}
+
+      - name: Check required secrets (oidc)
+        if: ${{ github.event.inputs.aws_auth_method == 'oidc' }}
+        env:
+          ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+        run: |
+          if [ -z "${ROLE_ARN}" ]; then
+            echo "::error::aws_auth_method=oidc requires the AWS_OIDC_ROLE_ARN repository secret."
+            echo "::error::Set it with: gh secret set AWS_OIDC_ROLE_ARN"
+            exit 1
+          fi
 
       - name: Configure AWS credentials (GitHub OIDC role assumption)
         if: ${{ github.event.inputs.aws_auth_method == 'oidc' }}

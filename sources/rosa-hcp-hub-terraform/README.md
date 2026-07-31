@@ -74,3 +74,49 @@ all three values explicitly, matching the previous manual behavior.
 - Day-1 worker autoscaling is implemented through module `machine_pools`.
 - For ACM+AAP+Argo CD hub clusters, keep `min_replicas_per_pool >= 2` for HA.
 - Validate min/max worker settings in a non-production account before Week 1-2 rollout.
+
+## GitHub Actions deployment (`.github/workflows/rosa-hub-terraform.yaml`)
+
+`rhcs_token` can be sourced from a repository secret instead of a local
+`terraform.tfvars` when running this stack from CI:
+
+- **Secret name:** `RHCS_TOKEN` (repository secret, not environment-scoped).
+  Set it with `gh secret set RHCS_TOKEN` or via
+  **Settings > Secrets and variables > Actions** in GitHub.
+- **Workflow:** manually triggered (`workflow_dispatch`) only -- this never
+  runs automatically on push/PR, consistent with this repo's stance of not
+  auto-applying changes to live cloud infrastructure.
+- **Inputs:**
+  - `action`: `plan` (default), `apply`, or `destroy`.
+  - `rhcs_token_override`: optional, supplies a one-time token for that run
+    instead of the `RHCS_TOKEN` secret. **Caution:** unlike secrets,
+    `workflow_dispatch` string inputs are visible to anyone with read access
+    to the run (including in the "re-run workflow" UI) -- only use this for
+    a token you're comfortable being visible that way, and prefer updating
+    the `RHCS_TOKEN` secret itself for anything longer-lived.
+- **AWS credentials:** selectable per run via the `aws_auth_method` input --
+  Duo/Secrets Manager is one option, not a requirement. Pick whichever this
+  AWS account actually supports:
+
+  | `aws_auth_method` | Required secrets | Notes |
+  | --- | --- | --- |
+  | `access_keys` (default) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`; optionally `AWS_SESSION_TOKEN` for temporary/STS creds | Simplest path; fine for sandbox accounts that don't enforce Duo |
+  | `oidc` | `AWS_OIDC_ROLE_ARN` (the IAM role ARN to assume) | No long-lived keys stored in GitHub at all; requires a one-time IAM OIDC identity provider trust for this repo. Recommended over `access_keys` once set up |
+  | `secrets_manager` | n/a yet -- **placeholder** | For this org's Duo-backed AWS Secrets Manager flow. The corresponding workflow step is a TODO; use `access_keys` or `oidc` until it's filled in |
+
+  Regardless of method, a **"Verify AWS credentials resolved"** step runs
+  `aws sts get-caller-identity` immediately after, so a bad/missing
+  credential fails fast with a clear message instead of a confusing error
+  partway through `terraform plan`.
+
+  Note that `plan` itself (not just `apply`/`destroy`) genuinely needs valid
+  AWS credentials -- this stack does live VPC/subnet auto-discovery via AWS
+  data sources during plan (see "VPC/subnet/CIDR auto-discovery" below), so
+  there's no fully credential-free plan path for this stack. `terraform
+  validate` (syntax/type checking only, no AWS calls) is the one command
+  here that never needs credentials, if that's ever useful as a lighter-weight
+  PR-time check.
+
+Local `terraform.tfvars` (gitignored) remains the normal path for
+interactive/sandbox use; the GitHub secrets only matter for the CI workflow
+path.

@@ -9,7 +9,11 @@ provider "rhcs" {
 data "aws_caller_identity" "current" {}
 
 locals {
+  # Required organizational tags (locals.tf) merged with hub-specific tags,
+  # with var.tags able to override either if a caller needs to. This is the
+  # single tag set applied to the module and machine pools below.
   base_tags = merge(
+    local.common_tags,
     {
       "managed-by" = "terraform"
       "platform"   = "tt-rosa-hcp-hub"

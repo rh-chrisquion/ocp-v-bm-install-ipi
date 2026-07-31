@@ -9,6 +9,11 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "env" {
+  description = "Environment slug used in required organizational tagging (e.g. sandbox, dev, staging, prod)."
+  type        = string
+}
+
 variable "openshift_version" {
   description = "OpenShift version to deploy."
   type        = string

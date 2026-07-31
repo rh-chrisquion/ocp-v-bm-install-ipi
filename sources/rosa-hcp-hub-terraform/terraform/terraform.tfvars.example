@@ -5,6 +5,9 @@ rhcs_token = "REPLACE_WITH_OCM_API_TOKEN"
 cluster_name      = "example-rosa-hub-hcp"
 openshift_version = "4.22.0"
 
+# Environment slug used in required organizational tagging (see locals.tf)
+env = "sandbox"
+
 # AWS placement
 aws_region = "us-east-2"
 

@@ -120,3 +120,13 @@ all three values explicitly, matching the previous manual behavior.
 Local `terraform.tfvars` (gitignored) remains the normal path for
 interactive/sandbox use; the GitHub secrets only matter for the CI workflow
 path.
+
+- **`ci.tfvars`** (committed, not gitignored): supplies the non-sensitive
+  required variables that have no default (`cluster_name`, `aws_region`,
+  `account_role_prefix`, `operator_role_prefix`) for the CI workflow, since
+  `terraform.tfvars` is never present in a CI checkout. Every command the
+  workflow runs uses `-input=false` so a genuinely missing variable fails
+  immediately with a clear error instead of hanging forever waiting for
+  interactive input that can never arrive in CI. Update `ci.tfvars` to match
+  whatever this environment should actually be named before running
+  `action=apply` for real.

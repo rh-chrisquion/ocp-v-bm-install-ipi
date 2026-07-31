@@ -157,16 +157,16 @@ jobs:
           echo "TF_VAR_rhcs_token=${TOKEN}" >> "$GITHUB_ENV"
 
       - name: Terraform init
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Terraform plan
         if: ${{ github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply' }}
-        run: terraform plan -out=tfplan
+        run: terraform plan -input=false -var-file=ci.tfvars -out=tfplan
 
       - name: Terraform apply
         if: ${{ github.event.inputs.action == 'apply' }}
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -input=false -auto-approve tfplan
 
       - name: Terraform destroy
         if: ${{ github.event.inputs.action == 'destroy' }}
-        run: terraform destroy -auto-approve
+        run: terraform destroy -input=false -var-file=ci.tfvars -auto-approve

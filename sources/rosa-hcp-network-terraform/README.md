@@ -83,6 +83,66 @@ Use `onprem_route_table_ids_override` only when your enterprise network pattern
 requires routing to a different route-table set than the one created by this
 stack.
 
+## Optional on-prem DNS resolution (for an on-prem bastion)
+
+`create_onprem_private_routes` (above) only gives on-prem hosts an *IP path*
+into the VPC. It does not help them resolve the private cluster's hostnames:
+a private ROSA HCP cluster's `api.<cluster-domain>` and
+`*.apps.<cluster-domain>` records live in a Route 53 **private hosted zone**
+that OCM associates only with this VPC, so only resolvers inside the VPC
+(or VPCs explicitly associated with that zone) can answer for it -- an
+on-prem DNS server has no way to know those records exist.
+
+Set `create_onprem_dns_resolver = true` and provide `onprem_dns_cidrs` to
+create a Route 53 Resolver **inbound endpoint** in the private subnets. This
+exposes the VPC's own resolver (which *does* know about the private hosted
+zone) to on-prem DNS servers via conditional forwarding, with no direct
+dependency on this repo's ROSA cluster stack -- it works for any private
+hosted zone associated with this VPC.
+
+```hcl
+create_onprem_dns_resolver = true
+onprem_dns_cidrs = [
+  "10.20.10.0/24"
+]
+```
+
+After `apply`, get the endpoint's IPs (one per AZ, for HA):
+
+```bash
+terraform output onprem_resolver_endpoint_ips
+```
+
+On your on-prem DNS server (BIND, Windows DNS, dnsmasq, etc.), add a
+conditional forwarding zone for the cluster's domain -- everything after
+`api.` in `cluster_api_url` from the hub stack's outputs -- pointed at those
+IPs on port 53. For example, in BIND:
+
+```text
+zone "c2d9y9w7o6u9g3c.fl4f.p3.openshiftapps.com" {
+    type forward;
+    forward only;
+    forwarders { 10.200.x.x; 10.200.y.y; };
+};
+```
+
+Once that's in place, **any on-prem host with a route to the VPC** --
+including a plain on-prem bastion/jump host with no AWS credentials or SSM
+agent at all -- can resolve and reach the cluster directly:
+
+```bash
+oc login https://api.<cluster-domain>:443 -u <user> -p <password>
+```
+
+This is a simpler path than the AWS-side SSM bastion documented in
+`sources/rosa-hcp-hub-terraform/README.md` when on-prem-to-VPC connectivity
+(TGW/VGW) already exists for another reason -- e.g. the same bare-metal
+network this repo's `ocp-baremetal-bootstrap` source targets -- since it's
+plain routed IP + DNS, with no port-forwarding tunnel required. The AWS SSM
+bastion is the better fit when no such on-prem connectivity exists yet, or
+when you'd rather avoid opening any inbound path from on-prem into the VPC
+at all.
+
 ## About VPC endpoints
 
 A VPC endpoint lets private subnets reach AWS services without sending traffic

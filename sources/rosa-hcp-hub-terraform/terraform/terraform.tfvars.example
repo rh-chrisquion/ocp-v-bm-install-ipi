@@ -75,3 +75,10 @@ tags = {
 # oidc_client_id      = "rosa-hub-cluster"
 # oidc_client_secret  = "REPLACE_WITH_OIDC_CLIENT_SECRET"
 # oidc_admin_username = "you@example.com"
+
+# --- Bastion host (only meaningful when private_cluster = true) ---
+# SSM Session Manager-only jump host for reaching the API/console once they
+# have no public endpoint. See "Connecting to a private cluster via the
+# bastion host" in README.md for client-side connection steps.
+# create_bastion        = true
+# bastion_instance_type = "t3.micro"

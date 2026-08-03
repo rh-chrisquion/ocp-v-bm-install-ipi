@@ -188,6 +188,16 @@ organization's SSO instead by setting `enable_oidc_idp = true` (see the
 "Identity providers" section in `sources/rosa-hcp-hub-terraform/terraform.tfvars.example`)
 and disabling `create_htpasswd_admin` once that's confirmed working.
 
+If you set `private_cluster = true` (only settable at cluster creation --
+see the source README), the API/console have no public endpoint. Set
+`create_bastion = true` alongside it and see "Connecting to a private
+cluster via the bastion host" in `sources/rosa-hcp-hub-terraform/README.md`
+for the SSM-based connection steps. If on-prem-to-VPC connectivity already
+exists instead (Transit Gateway/VPN Gateway, per the network stack's
+`create_onprem_private_routes`), see "Optional on-prem DNS resolution" in
+`sources/rosa-hcp-network-terraform/README.md` for a simpler on-prem-bastion
+alternative that needs no SSM tunnel.
+
 ### 6. Next steps
 
 - Bootstrap the app-of-apps (`sources/app-of-apps`) against the new cluster

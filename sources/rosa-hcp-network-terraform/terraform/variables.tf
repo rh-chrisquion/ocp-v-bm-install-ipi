@@ -129,3 +129,23 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# --- Optional hybrid DNS for on-prem cluster access ---
+# A private ROSA HCP cluster's API/console records live in a Route 53
+# private hosted zone associated only with this VPC, so on-prem hosts can't
+# resolve them by default even once create_onprem_private_routes gives them
+# an IP path in. A Resolver inbound endpoint exposes this VPC's resolver
+# (which knows about that private hosted zone) to on-prem DNS servers via
+# conditional forwarding. See "Optional on-prem DNS resolution" in README.md.
+
+variable "create_onprem_dns_resolver" {
+  description = "When true, creates a Route 53 Resolver inbound endpoint so on-prem DNS servers can conditionally forward queries for the cluster's private hosted zone into this VPC."
+  type        = bool
+  default     = false
+}
+
+variable "onprem_dns_cidrs" {
+  description = "On-prem CIDRs allowed to send DNS queries (TCP/UDP 53) to the resolver inbound endpoint. Required (non-empty) when create_onprem_dns_resolver is true."
+  type        = list(string)
+  default     = []
+}

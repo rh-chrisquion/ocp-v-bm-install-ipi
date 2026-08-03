@@ -52,6 +52,16 @@ create_s3_gateway_endpoint = true
 # onprem_vpn_gateway_id     = null
 # onprem_route_table_ids_override = []
 
+# Optional hybrid DNS: lets on-prem hosts (e.g. an on-prem bastion) resolve
+# the private cluster's API/console hostnames once the routes above give
+# them an IP path in. See "Optional on-prem DNS resolution" in README.md.
+# create_onprem_dns_resolver = true
+# onprem_dns_cidrs = [
+#   "10.20.10.0/24",
+#   "10.30.10.0/24",
+#   "10.40.10.0/24"
+# ]
+
 tags = {
   environment = "hub"
   owner       = "platform-team"

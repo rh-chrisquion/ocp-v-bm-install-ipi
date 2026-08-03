@@ -75,6 +75,94 @@ all three values explicitly, matching the previous manual behavior.
 - For ACM+AAP+Argo CD hub clusters, keep `min_replicas_per_pool >= 2` for HA.
 - Validate min/max worker settings in a non-production account before Week 1-2 rollout.
 
+## Connecting to a private cluster via the bastion host
+
+`private_cluster` (`rhcs_cluster_rosa_hcp`'s `private` attribute) is
+**immutable after cluster creation** -- set it before the first `terraform
+apply` for a new cluster; it cannot be toggled on an existing one (see the
+[rhcs_cluster_rosa_hcp docs](https://registry.terraform.io/providers/terraform-redhat/rhcs/latest/docs/resources/cluster_rosa_hcp)).
+
+With `private_cluster = true`, the API server and default router have **no
+public endpoint** -- `oc login`/console access from outside the VPC requires
+a path into the private subnets. Set `create_bastion = true` (`bastion.tf`)
+to provision a small EC2 instance there for exactly this, reachable only
+through **AWS Systems Manager Session Manager** -- no SSH key pair, no
+inbound security group rules, IAM- and CloudTrail-audited access instead.
+
+### Prerequisites
+
+- The [Session Manager plugin for the AWS CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+  installed locally (`session-manager-plugin`).
+- Your AWS credentials need `ssm:StartSession` on the bastion instance (already
+  covered if you're using the same credentials as the rest of this stack).
+
+### Connect to the API
+
+```bash
+API_HOST=$(terraform output -raw cluster_api_url | sed -E 's#https://([^:]+).*#\1#')
+BASTION_ID=$(terraform output -raw bastion_instance_id)
+
+# Map the real API hostname to localhost so the cluster's TLS certificate
+# (issued for that hostname, not "localhost") validates without
+# --insecure-skip-tls-verify.
+echo "127.0.0.1 ${API_HOST}" | sudo tee -a /etc/hosts
+
+# Start the port-forward tunnel (leave running in its own terminal)
+aws ssm start-session \
+  --target "${BASTION_ID}" \
+  --document-name AWS-StartPortForwardingSessionToRemoteHost \
+  --parameters "{\"host\":[\"${API_HOST}\"],\"portNumber\":[\"443\"],\"localPortNumber\":[\"443\"]}"
+```
+
+In a separate terminal, log in exactly as you would against the real
+hostname (it now resolves to your local tunnel via `/etc/hosts`):
+
+```bash
+oc login "https://${API_HOST}:443" -u sandbox-admin -p "$(terraform output -raw htpasswd_admin_password)"
+```
+
+### Connect to the console
+
+Same pattern, using the console hostname and a different local port so you
+can run both tunnels at once:
+
+```bash
+CONSOLE_HOST=$(terraform output -raw cluster_console_url | sed -E 's#https://([^/]+).*#\1#')
+echo "127.0.0.1 ${CONSOLE_HOST}" | sudo tee -a /etc/hosts
+
+aws ssm start-session \
+  --target "${BASTION_ID}" \
+  --document-name AWS-StartPortForwardingSessionToRemoteHost \
+  --parameters "{\"host\":[\"${CONSOLE_HOST}\"],\"portNumber\":[\"443\"],\"localPortNumber\":[\"443\"]}"
+```
+
+Then browse to `https://<CONSOLE_HOST>` locally. This only maps the
+console's own hostname -- individual application `Route`s under
+`apps.<cluster-domain>` each have their own hostname and would need their
+own `/etc/hosts` entry + tunnel to reach the same way. For routine
+multi-route/browser access to a private cluster, an
+[AWS Client VPN endpoint](https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/what-is.html)
+into the VPC is a better fit than one-off SSM tunnels -- not currently
+provisioned by this stack.
+
+### Cleanup
+
+Remove the `/etc/hosts` entries and stop the `aws ssm start-session`
+process(es) when done; the bastion instance itself can stay running (or set
+`create_bastion = false` and re-apply to remove it) since it has no public
+exposure either way.
+
+### Alternative: an on-prem bastion instead
+
+If on-prem-to-VPC connectivity (Transit Gateway or VPN Gateway) already
+exists -- for example the same network this repo's `ocp-baremetal-bootstrap`
+source targets -- a plain bastion on-prem can reach the private cluster
+directly over routed IP, with no SSM tunnel and no AWS credentials needed on
+that host at all. This needs one more piece the AWS-side bastion above
+doesn't: DNS resolution for the cluster's private hosted zone from on-prem.
+See "Optional on-prem DNS resolution" in
+`sources/rosa-hcp-network-terraform/README.md`.
+
 ## GitHub Actions deployment (`.github/workflows/rosa-hub-terraform.yaml`)
 
 `rhcs_token` can be sourced from a repository secret instead of a local

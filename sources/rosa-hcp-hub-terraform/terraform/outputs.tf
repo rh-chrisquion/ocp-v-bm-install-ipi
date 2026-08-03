@@ -63,3 +63,8 @@ output "oidc_idp_enabled" {
   description = "Whether the OIDC identity provider (for org SSO / Duo-fronted login) is currently configured."
   value       = var.enable_oidc_idp
 }
+
+output "bastion_instance_id" {
+  description = "EC2 instance ID of the SSM bastion host, when create_bastion is true. Use with: aws ssm start-session --target <this-value> ..."
+  value       = try(aws_instance.bastion[0].id, null)
+}

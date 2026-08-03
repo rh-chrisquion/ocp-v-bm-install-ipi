@@ -257,3 +257,29 @@ variable "oidc_admin_username" {
   type        = string
   default     = null
 }
+
+# --- Bastion host (private cluster access) ---
+# Only meaningful when private_cluster = true, where the API/console have no
+# public endpoint. Provides an SSM Session Manager-only jump host inside the
+# private subnets -- no SSH key, no open inbound security group rules. See
+# "Connecting to a private cluster via the bastion host" in this source's
+# README for the client-side connection steps.
+
+variable "create_bastion" {
+  description = "Create an SSM-only bastion EC2 instance in the private subnets for reaching a private cluster's API/console. No-op (but harmless) when private_cluster = false, since the API/console are already publicly reachable in that case."
+  type        = bool
+  default     = false
+}
+
+variable "bastion_instance_type" {
+  description = "Instance type for the bastion host. A small instance is sufficient since it only proxies SSM sessions."
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "bastion_ami_id" {
+  description = "AMI ID for the bastion host. Leave null to auto-discover the latest Amazon Linux 2023 AMI (which ships the SSM agent preinstalled)."
+  type        = string
+  default     = null
+  nullable    = true
+}

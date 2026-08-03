@@ -60,3 +60,8 @@ output "s3_gateway_endpoint_id" {
   description = "S3 gateway endpoint ID when enabled."
   value       = try(aws_vpc_endpoint.s3_gateway[0].id, null)
 }
+
+output "onprem_resolver_endpoint_ips" {
+  description = "IP addresses of the Route 53 Resolver inbound endpoint, when create_onprem_dns_resolver is true. Point an on-prem conditional-forwarding rule for the cluster's private hosted zone at these IPs on port 53."
+  value       = try(aws_route53_resolver_endpoint.onprem_inbound[0].ip_address[*].ip, null)
+}

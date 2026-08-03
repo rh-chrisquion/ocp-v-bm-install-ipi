@@ -23,12 +23,12 @@ Cluster names must also be:
 
 All cluster names follow the pattern:
 
-```
+```text
 <dc>-<type>-<env>-<n>
 ```
 
 | Segment | Meaning | Examples |
-|---|---|---|
+| --- | --- | --- |
 | `dc` | Data center or cloud region short code | `rdu`, `chi`, `phx`, `use1`, `euw1` |
 | `type` | Cluster type (see ADR profiles/cluster-types/) | `sno`, `mgmt`, `app`, `hub` |
 | `env` | Environment | `dev`, `tst`, `prd` |

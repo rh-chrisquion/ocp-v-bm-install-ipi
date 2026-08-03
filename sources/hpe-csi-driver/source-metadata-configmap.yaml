@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -9,4 +10,6 @@ data:
     (backed by an HPE primary storage array) that VM disks used in on-prem
     cluster validation need in order to survive live migration and hard node
     failure — node-local storage cannot follow the VM to another node.
-  scope: "on-prem clusters with an HPE storage backend (Alletra/Nimble/Primera/3PAR) reachable from every node"
+  scope: >-
+    on-prem clusters with an HPE storage backend
+    (Alletra/Nimble/Primera/3PAR) reachable from every node

@@ -51,7 +51,7 @@ Git is where durable decisions land.
 Each environment has a defined relationship between clusters and git:
 
 | Environment | `targetRevision` | When to promote |
-|---|---|---|
+| --- | --- | --- |
 | `dev` | Feature branch or `HEAD` | After the inner loop produces a working configuration |
 | `test` | `HEAD` (main branch) | After feature branch is reviewed and merged |
 | `prod` | Semver tag (e.g., `v1.2.0`) | After test validation passes; explicit tag cut |

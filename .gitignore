@@ -1,28 +1,22 @@
-# Local Python virtual environment
-.venv/
-
-# Local pull secret for bare-metal bootstrap (never commit credentials)
-sources/ocp-baremetal-bootstrap/secrets/
-sources/ocp-baremetal-bootstrap/inventories/lab/group_vars/all.local.yml
-
-# Generated installer artifacts can contain embedded pull secret content
-sources/ocp-baremetal-bootstrap/build/
-
-# Local cluster endpoint metadata overrides
-clusters/ocpv420/app-of-apps/cluster-secret.local.yaml
-
-# Local installer binaries and archives
-sources/ocp-baremetal-bootstrap/openshift-install
-sources/ocp-baremetal-bootstrap/openshift-install-*.tar.gz
-
-# OS/editor artifacts
-.DS_Store
-*.swp
-*.swo
-*~
-.*.swp
-.*.swo
-
-# Terraform plan artifacts can include sensitive infrastructure details
-*.plan
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
 *.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Keep the lock file committed (do NOT ignore .terraform.lock.hcl)
+
+# Local tfvars that may hold real subnet/account IDs — commit terraform.tfvars.example instead
+terraform.tfvars
+*.auto.tfvars
+
+# JetBrains IDE
+**/.idea

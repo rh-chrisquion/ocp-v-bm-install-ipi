@@ -1,0 +1,26 @@
+apiVersion: lvm.topolvm.io/v1alpha1
+kind: LVMCluster
+metadata:
+  name: lvm-cluster
+  namespace: openshift-lvm-storage
+spec:
+  storage:
+    deviceClasses:
+    - name: lvm-raid6-sc
+      default: true
+      vgName: vg1
+      # Structurally fixed: Exact node targeting wrapper layout
+      nodeSelector:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+            - sno
+      deviceSelector:
+        paths:
+        - /dev/loop1
+      thinPoolConfig:
+        name: thin-pool-1
+        sizePercent: 90
+        overprovisionRatio: 5

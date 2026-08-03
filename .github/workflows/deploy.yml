@@ -1,0 +1,197 @@
+---
+name: ROSA HCP Terraform - PR Plan Only / Manual Apply
+
+run-name: >-
+  ${{ github.event_name == 'pull_request'
+  && 'PR Terraform Plan Only (Apply Disabled)'
+  || format('Manual Terraform {0}', inputs.action) }}
+  | By: @${{ github.actor }}
+
+"on":
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'sources/rosa-hcp-hub-terraform/terraform/**'
+      - '.github/workflows/deploy.yml'
+
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Manual action (apply never runs for pull requests)
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - apply
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+
+env:
+  AWS_REGION: "eu-west-1"
+  TERRAFORM_DIR: sources/rosa-hcp-hub-terraform/terraform
+  TF_VAR_rhcs_token: ${{ secrets.RHHC_ROSA_SVC_TOKEN }}
+
+jobs:
+  terraform:
+    name: >-
+      ${{ github.event_name == 'pull_request'
+      && 'PR Plan Only'
+      || format('Manual {0}', inputs.action) }}
+      (${{ matrix.env.name }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        env:
+          - name: internal
+            github_env: internal
+            # Enable once external.tfvars has the real VPC name
+            # - name: external
+            #   github_env: external
+
+    environment:
+      name: ${{ matrix.env.github_env }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.env.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Configure AWS Credentials via OIDC
+        # yamllint disable rule:line-length
+        uses: >-
+          aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        # yamllint enable rule:line-length
+        with:
+          role-to-assume: ${{ secrets.PIPELINE_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: >-
+          hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: "1.14.8"
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform fmt -check -recursive
+        continue-on-error: false
+
+      - name: Terraform Init
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform init -input=false -reconfigure
+
+      - name: Terraform Plan (No Infrastructure Changes)
+        env:
+          TF_VAR_assume_role_arn: ${{ secrets.ASSUME_ROLE_ARN }}
+        id: plan
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform plan -input=false -var-file=ci.tfvars -out=plan
+
+      - name: Terraform Plan Output
+        id: plan_output
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform show -no-color plan > tfplan.txt
+
+      - name: Terraform Plan Summary
+        uses: >-
+          actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          PLAN_FILE_PATH: "${{ env.TERRAFORM_DIR }}/tfplan.txt"
+          ENV_NAME: ${{ matrix.env.name }}
+          PLAN_OUTCOME: ${{ steps.plan.outcome }}
+          FMT_OUTCOME: ${{ steps.fmt.outcome }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            const planPath = process.env.PLAN_FILE_PATH;
+            let planBody;
+
+            try {
+              planBody = fs.readFileSync(planPath, 'utf8');
+            } catch (err) {
+              console.error(`Could not read plan file at ${planPath}:`, err);
+              planBody = `Could not read plan output from file: ${planPath}`;
+            }
+
+            // Truncate the plan if it's too large for a GitHub comment
+            // GitHub's maximum comment length.
+            const maxCommentLength = 65536;
+            const header = [
+              `### Terraform Plan for \`rosa-hcp\` — `,
+              `\`${process.env.ENV_NAME}\`\n\n`,
+              '#### Terraform Format and Style 🖌',
+              `\`${process.env.FMT_OUTCOME}\`\n`,
+              '#### Terraform Plan 📖',
+              `\`${process.env.PLAN_OUTCOME}\`\n\n`,
+              '<details><summary>Show Plan</summary>\n\n\`\`\`\n'
+            ].join('');
+            const footer = [
+              '\n\`\`\`\n\n</details>\n\n*Pusher: @',
+              '${{ github.actor }}',
+              ', Action: \`${{ github.event_name }}\`',
+              ', Workflow: \`${{ github.workflow }}\`*'
+            ].join('');
+            const truncationMessage = [
+              '\n... (plan output truncated) ...\n\n',
+              '**View the full plan by downloading the ',
+              `\`tfplan-${process.env.ENV_NAME}\` artifact from the `,
+              '[Workflow Run Summary](',
+              '${{ github.server_url }}/${{ github.repository }}',
+              '/actions/runs/${{ github.run_id }}).**'
+            ].join('');
+
+            if ((header + planBody + footer).length > maxCommentLength) {
+              const availableLength = maxCommentLength
+                - header.length
+                - footer.length
+                - truncationMessage.length;
+              planBody = planBody.substring(0, availableLength)
+                + truncationMessage;
+            }
+
+            const finalBody = header + planBody + footer;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: finalBody
+            });
+
+      - name: Upload Plan Artifact
+        if: >-
+          github.event_name == 'pull_request' ||
+          github.ref == 'refs/heads/main'
+        uses: >-
+          actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tfplan-${{ matrix.env.name }}
+          path: ${{ env.TERRAFORM_DIR }}/tfplan.txt
+
+      # Safety boundary: apply is available only through a manual dispatch.
+      - name: Terraform Apply (Manual Dispatch Only)
+        if: >-
+          github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        env:
+          TF_VAR_assume_role_arn: ${{ secrets.ASSUME_ROLE_ARN }}
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform apply -input=false -auto-approve plan

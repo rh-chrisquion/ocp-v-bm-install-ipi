@@ -1,6 +1,6 @@
 # Region and naming
 aws_region   = "us-east-2"
-network_name = "tt-rosa-hcp-hub-network"
+network_name = "example-rosa-hcp-hub-network"
 
 # VPC machine supernet (must cover all worker subnets)
 vpc_cidr = "10.200.0.0/16"

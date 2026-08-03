@@ -62,4 +62,3 @@ ADR compliance script enforces key mechanical invariants such as:
 - Use `oc` (not `kubectl`) for OpenShift cluster interaction examples.
 - Keep defaults centralized and use gate files only for intentional deviations.
 - Keep production-specific pins (for example versions/images) explicit and auditable.
-

@@ -1,6 +1,7 @@
+---
 name: ROSA Hub Terraform
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       action:
@@ -15,10 +16,10 @@ on:
       rhcs_token_override:
         description: >-
           Optional one-time override for the OCM API token. Leave blank to
-          use the RHCS_TOKEN repository secret. WARNING: workflow_dispatch
-          inputs are visible to anyone with read access to this repo's
-          Actions runs (unlike secrets) -- only use this for a token you are
-          comfortable exposing that way.
+          use the RHHC_ROSA_SVC_TOKEN repository secret. WARNING:
+          workflow_dispatch inputs are visible to anyone with read access to
+          this repo's Actions runs (unlike secrets) -- only use this for a
+          token you are comfortable exposing that way.
         required: false
         type: string
       aws_auth_method:
@@ -41,7 +42,7 @@ on:
 
 permissions:
   contents: read
-  # Only required for aws_auth_method=oidc (GitHub OIDC -> AssumeRoleWithWebIdentity).
+  # Only required for aws_auth_method=oidc (GitHub OIDC to role assumption).
   # Harmless no-op for the other methods.
   id-token: write
 
@@ -64,7 +65,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "latest"
+          terraform_version: "1.14.8"
 
       # Three selectable AWS credential paths -- Duo/Secrets Manager is one
       # option, not a hard requirement. Exactly one of the following three
@@ -80,8 +81,10 @@ jobs:
           SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           if [ -z "${KEY_ID}" ] || [ -z "${SECRET_KEY}" ]; then
-            echo "::error::aws_auth_method=access_keys requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY repository secrets."
-            echo "::error::Set them with: gh secret set AWS_ACCESS_KEY_ID   and   gh secret set AWS_SECRET_ACCESS_KEY"
+            echo "::error::aws_auth_method=access_keys requires the \
+            AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY repository secrets."
+            echo "::error::Set them with gh secret set AWS_ACCESS_KEY_ID \
+            and gh secret set AWS_SECRET_ACCESS_KEY."
             exit 1
           fi
 
@@ -100,7 +103,8 @@ jobs:
           ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
         run: |
           if [ -z "${ROLE_ARN}" ]; then
-            echo "::error::aws_auth_method=oidc requires the AWS_OIDC_ROLE_ARN repository secret."
+            echo "::error::aws_auth_method=oidc requires the \
+            AWS_OIDC_ROLE_ARN repository secret."
             echo "::error::Set it with: gh secret set AWS_OIDC_ROLE_ARN"
             exit 1
           fi
@@ -116,41 +120,51 @@ jobs:
       # Secrets Manager / Duo-backed credential retrieval flow once it's
       # finalized. Only runs when aws_auth_method=secrets_manager is
       # explicitly selected -- it never blocks the other two methods.
-      - name: Configure AWS credentials (placeholder -- Secrets Manager / Duo flow)
-        if: ${{ github.event.inputs.aws_auth_method == 'secrets_manager' }}
+      - name: >-
+          Configure AWS credentials
+          (placeholder -- Secrets Manager / Duo flow)
+        if: >-
+          ${{ github.event.inputs.aws_auth_method == 'secrets_manager' }}
         run: |
-          echo "::warning::AWS credential retrieval from Secrets Manager is not implemented yet."
-          echo "::warning::Add the real retrieval steps here, or re-run with aws_auth_method=access_keys or oidc instead."
+          echo "::warning::AWS credential retrieval from Secrets Manager \
+          is not implemented yet."
+          echo "::warning::Add the real retrieval steps here, or re-run \
+          with aws_auth_method=access_keys or oidc instead."
           # Expected shape once finalized, for example:
-          #   aws secretsmanager get-secret-value --secret-id <secret-id> \
-          #     --query SecretString --output text > /tmp/aws-creds.json
-          #   echo "AWS_ACCESS_KEY_ID=$(jq -r .access_key_id /tmp/aws-creds.json)" >> "$GITHUB_ENV"
-          #   echo "AWS_SECRET_ACCESS_KEY=$(jq -r .secret_access_key /tmp/aws-creds.json)" >> "$GITHUB_ENV"
-          #   echo "AWS_SESSION_TOKEN=$(jq -r .session_token /tmp/aws-creds.json)" >> "$GITHUB_ENV"
+          # aws secretsmanager get-secret-value --secret-id <secret-id> \
+          #   --query SecretString --output text > /tmp/aws-creds.json
+          # Parse the returned JSON and write AWS_ACCESS_KEY_ID,
+          # AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN to GITHUB_ENV.
 
       - name: Verify AWS credentials resolved
         run: |
-          if ! IDENTITY=$(aws sts get-caller-identity --query Arn --output text 2>&1); then
-            echo "::error::No valid AWS credentials for aws_auth_method='${{ github.event.inputs.aws_auth_method }}'."
-            echo "::error::Check the secrets that method needs are set (see README), or re-run with a different aws_auth_method."
+          if ! IDENTITY=$(aws sts get-caller-identity \
+            --query Arn --output text 2>&1); then
+            echo "::error::No valid AWS credentials for the selected \
+            aws_auth_method."
+            echo "::error::Check the required secrets (see README), or \
+            re-run with a different aws_auth_method."
             exit 1
           fi
           echo "AWS credentials verified: ${IDENTITY}"
 
-      - name: Resolve rhcs_token (repository secret, with optional manual override)
+      - name: >-
+          Resolve rhcs_token
+          (repository secret, with optional manual override)
         env:
-          RHCS_TOKEN_SECRET: ${{ secrets.RHCS_TOKEN }}
+          RHHC_ROSA_SVC_TOKEN_SECRET: ${{ secrets.RHHC_ROSA_SVC_TOKEN }}
           RHCS_TOKEN_OVERRIDE: ${{ github.event.inputs.rhcs_token_override }}
         run: |
           if [ -n "${RHCS_TOKEN_OVERRIDE}" ]; then
             TOKEN="${RHCS_TOKEN_OVERRIDE}"
             echo "Using manually supplied rhcs_token_override for this run."
           else
-            TOKEN="${RHCS_TOKEN_SECRET}"
-            echo "Using RHCS_TOKEN repository secret."
+            TOKEN="${RHHC_ROSA_SVC_TOKEN_SECRET}"
+            echo "Using RHHC_ROSA_SVC_TOKEN repository secret."
           fi
           if [ -z "${TOKEN}" ]; then
-            echo "::error::No rhcs_token available. Set the RHCS_TOKEN repository secret or supply rhcs_token_override."
+            echo "::error::No rhcs_token available. Set the \
+            RHHC_ROSA_SVC_TOKEN secret or supply rhcs_token_override."
             exit 1
           fi
           echo "::add-mask::${TOKEN}"
@@ -160,7 +174,9 @@ jobs:
         run: terraform init -input=false
 
       - name: Terraform plan
-        if: ${{ github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply' }}
+        if: >-
+          ${{ github.event.inputs.action == 'plan' ||
+          github.event.inputs.action == 'apply' }}
         run: terraform plan -input=false -var-file=ci.tfvars -out=tfplan
 
       - name: Terraform apply

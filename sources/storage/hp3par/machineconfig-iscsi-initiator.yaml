@@ -1,0 +1,17 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-master-iscsi-initiator
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+      - name: iscsid.service
+        enabled: true
+      - name: iscsi.service
+        enabled: true

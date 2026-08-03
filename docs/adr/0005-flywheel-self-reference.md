@@ -55,7 +55,7 @@ ApplicationSet manifest itself.
 - **Bootstrapping seam**: The ApplicationSet must be applied manually once
   (via `oc apply` or Ansible) before it can manage itself.
 
-  ```
+  ```bash
   oc apply -k clusters/<clusterName>/app-of-apps/
   ```
 
@@ -86,7 +86,7 @@ projects will fail validation.
 - **Bootstrapping seam**: Apply the `app-projects` source out-of-band before or
   immediately after bootstrapping the ApplicationSet.
 
-  ```
+  ```bash
   helm template sources/app-projects/chart \
     -f sources/app-projects/chart/values.yaml \
     | oc apply -f -

@@ -46,7 +46,7 @@ declared in git, applied by Argo CD, deviations visible as Argo CD sync drift.
 CR. The base manifest sets only `spec.channel` — no `spec.desiredUpdate`. This
 is the org default: channel-tracking with automatic patch upgrades.
 
-```
+```text
 sources/cluster-version/
   kustomization.yaml
   cluster-version.yaml        # spec.channel only; no desiredUpdate

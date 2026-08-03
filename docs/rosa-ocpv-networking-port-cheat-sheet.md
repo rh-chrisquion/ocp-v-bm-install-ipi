@@ -7,7 +7,7 @@ Scope: OCP-V bare-metal agent-based installs managed by a ROSA HCP hub running A
 | Color | Meaning | How to Treat It |
 | --- | --- | --- |
 | Green (`success`) | Baseline required for the recommended architecture | Treat as default allow path for Day-0 and Day-1 readiness |
-| Yellow (`warning`) | Conditional control path or exception-only flow | Enable only when TT approves a specific use case |
+| Yellow (`warning`) | Conditional control path or exception-only flow | Enable only when the administrator approves a specific use case |
 | Blue (`info`) | Context or environment-dependent supporting control | Validate against DNS, routing, and security design choices |
 
 ## Cross-Site Hub to Spoke Management Ports
@@ -19,7 +19,7 @@ Scope: OCP-V bare-metal agent-based installs managed by a ROSA HCP hub running A
 | Argo CD classic push | ROSA Argo controller -> on-prem OCP-V API | TCP 6443 | Hub outbound + spoke inbound | Conditional | Required only for direct push model | Yellow |
 | AAP mesh control path | AAP execution nodes <-> AAP control mesh peers | TCP 27199 (default, configurable) | Depends on mesh topology | Conditional | Receptor mesh transport for job dispatch/results | Yellow |
 | AAP UI/API | Execution nodes/operators -> ROSA AAP API/UI | TCP 443 | Spoke outbound | Yes (centralized control) | Job control, inventory sync, callback/results | Green |
-| Optional direct hub node operations | ROSA automation components -> on-prem OCP-V API | TCP 6443 | Hub outbound + spoke inbound | Conditional | Only if TT requires direct hub-initiated cluster actions | Yellow |
+| Optional direct hub node operations | ROSA automation components -> on-prem OCP-V API | TCP 6443 | Hub outbound + spoke inbound | Conditional | Only if Admins requires direct hub-initiated cluster actions | Yellow |
 | Hybrid DNS forwarding | AWS resolver <-> on-prem DNS resolvers | TCP/UDP 53 | Bidirectional | Conditional | Required when split-horizon/forwarding is used | Blue |
 
 ## OCP-V Agent-Based Install and Node Provisioning Ports (On-Prem)

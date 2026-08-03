@@ -1,8 +1,10 @@
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: rosa-hcp-network-terraform-source
   namespace: openshift-gitops
 data:
-  purpose: "Terraform source for ROSA HCP VPC, subnets, NAT, and endpoints"
+  purpose: >-
+    Terraform source for ROSA HCP VPC, subnets, NAT, and endpoints
   terraformRoot: "terraform"

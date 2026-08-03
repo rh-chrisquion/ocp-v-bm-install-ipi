@@ -35,7 +35,7 @@ A third failure mode is addressed by policy rather than mechanics:
 The following rules are enforced via GitHub branch protection:
 
 | Rule | Setting | Rationale |
-|------|---------|-----------|
+| --- | --- | --- |
 | Require pull request | Enabled (0 approvers) | Forces PR flow; enables CI hooks |
 | Dismiss stale reviews | Disabled | Solo/small-team repo; not needed |
 | Require status checks | None configured initially | Add when CI pipeline exists |
@@ -55,7 +55,7 @@ below. The risk of abuse is accepted in exchange for operational flexibility.
 ### Branch naming convention
 
 | Branch type | Pattern | Purpose |
-|------------|---------|---------|
+| --- | --- | --- |
 | Feature / change | `feature/<short-description>` | Normal development |
 | Hotfix | `hotfix/<short-description>` | Break-glass: expedited PR |
 | Release | `release/<version>` | Reserved for future use |
@@ -64,7 +64,7 @@ below. The risk of abuse is accepted in exchange for operational flexibility.
 
 No enforced format (no commit-msg hook). By convention:
 
-```
+```text
 <type>: <short description>
 
 <body — what and why, not how>

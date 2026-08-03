@@ -1,3 +1,4 @@
+---
 - name: Generate install-config.yaml
   ansible.builtin.template:
     src: install-config.yaml.j2
@@ -34,14 +35,15 @@
     that:
       - ocp_openshift_install_check.rc == 0
     fail_msg: >-
-      openshift-install is required for day-0 cluster-manifests generation.
-      Install openshift-install and rerun this playbook.
+      openshift-install is required for day-0 cluster-manifests
+      generation. Install openshift-install and rerun this playbook.
   when:
     - ocp_integrity_enabled | bool
     - ocp_integrity_generate_cluster_manifests | bool
 
 - name: Generate cluster-manifests from installer inputs
-  ansible.builtin.command: "openshift-install agent create cluster-manifests --dir {{ ocp_output_dir }}"
+  ansible.builtin.command: >-
+    openshift-install agent create cluster-manifests --dir {{ ocp_output_dir }}
   when:
     - ocp_integrity_enabled | bool
     - ocp_integrity_generate_cluster_manifests | bool
@@ -58,7 +60,8 @@
     - ocp_integrity_generate_cluster_manifests | bool
     - ocp_schedulable_masters | default(false) | bool
 
-- name: Generate day-0 integrity manifests (performance, kubelet, placement, admission)
+- name: Generate day-0 integrity manifests
+    (performance, kubelet, placement, admission)
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ ocp_output_dir }}/openshift/{{ item.dest }}"
@@ -81,18 +84,34 @@
 - name: Show generated artifact locations
   ansible.builtin.debug:
     msg:
-      - "Generated {{ ocp_output_dir }}/install-config.yaml"
-      - "Generated {{ ocp_output_dir }}/agent-config.yaml"
-      - "Generated {{ ocp_output_dir }}/openshift/99-control-plane-performanceprofile.yaml"
-      - "Generated {{ ocp_output_dir }}/openshift/99-control-plane-kubeletconfig.yaml"
-      - "Generated {{ ocp_output_dir }}/openshift/99-namespace-guardrails.yaml"
-      - "Generated {{ ocp_output_dir }}/openshift/99-integrity-validating-admission.yaml"
+      - >-
+        Generated {{ ocp_output_dir }}/install-config.yaml
+      - >-
+        Generated {{ ocp_output_dir }}/agent-config.yaml
+      - >-
+        Generated {{ ocp_output_dir }}/openshift/
+        99-control-plane-performanceprofile.yaml
+      - >-
+        Generated {{ ocp_output_dir }}/openshift/
+        99-control-plane-kubeletconfig.yaml
+      - >-
+        Generated {{ ocp_output_dir }}/openshift/
+        99-namespace-guardrails.yaml
+      - >-
+        Generated {{ ocp_output_dir }}/openshift/
+        99-integrity-validating-admission.yaml
 
 - name: Show control-plane schedulable note for agent-based flow
   ansible.builtin.debug:
     msg:
-      - "The install-config.yaml no longer accepts mastersSchedulable in newer OpenShift releases."
-      - "This role now writes day-0 integrity manifests and sets spec.mastersSchedulable in cluster-manifests/agent-cluster-install.yaml."
+      - >-
+        The install-config.yaml no longer accepts mastersSchedulable in
+        newer OpenShift releases.
+      - >-
+        This role now writes day-0 integrity manifests and sets
+        spec.mastersSchedulable in
+        cluster-manifests/agent-cluster-install.yaml.
       - "Rebuild the ISO after manifest generation:"
-      - "  openshift-install agent create image --dir {{ ocp_output_dir }}"
+      - >-
+        openshift-install agent create image --dir {{ ocp_output_dir }}
   when: ocp_schedulable_masters | default(false) | bool

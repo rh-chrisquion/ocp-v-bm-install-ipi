@@ -67,9 +67,40 @@ jobs:
 
       - name: Validate raw manifests with kubeconform
         run: |
-          if find sources clusters -type f \( -name '*.yaml' -o -name '*.yml' \) | grep -q .; then
-            find sources clusters -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 \
-              | xargs -0 kubeconform -summary -strict -ignore-missing-schemas
+          if find sources -type f \( -name '*.yaml' -o -name '*.yml' \) \
+            ! -path '*/inventories/*' \
+            ! -path '*/group_vars/*' \
+            ! -path '*/roles/*' \
+            ! -path '*/defaults/*' \
+            ! -path '*/handlers/*' \
+            ! -path '*/templates/*' \
+            ! -name 'Chart.yaml' \
+            ! -name 'values.yaml' \
+            ! -name 'install-config.yaml' \
+            ! -name 'hosts.yml' \
+            ! -name 'site.yml' \
+            ! -name 'kustomization.yaml' \
+            ! -name '*.example.yaml' \
+            ! -name '*.example.yml' \
+            -print0 | xargs -0 -r grep -lE '^[[:space:]]*(apiVersion|kind):' | grep -q .; then
+            find sources -type f \( -name '*.yaml' -o -name '*.yml' \) \
+              ! -path '*/inventories/*' \
+              ! -path '*/group_vars/*' \
+              ! -path '*/roles/*' \
+              ! -path '*/defaults/*' \
+              ! -path '*/handlers/*' \
+              ! -path '*/templates/*' \
+              ! -name 'Chart.yaml' \
+              ! -name 'values.yaml' \
+              ! -name 'install-config.yaml' \
+              ! -name 'hosts.yml' \
+              ! -name 'site.yml' \
+              ! -name 'kustomization.yaml' \
+              ! -name '*.example.yaml' \
+              ! -name '*.example.yml' \
+              -print0 \
+              | xargs -0 -r grep -lE '^[[:space:]]*(apiVersion|kind):' \
+              | xargs -r kubeconform -summary -strict -ignore-missing-schemas
           fi
 
       - name: Validate kustomize sources

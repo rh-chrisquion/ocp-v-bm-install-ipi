@@ -9,7 +9,7 @@ locals {
   base_tags = merge(
     {
       "managed-by" = "terraform"
-      "platform"   = "tt-rosa-hcp-hub"
+      "platform"   = "example-rosa-hcp-hub"
       "stack"      = "network-foundation"
     },
     var.tags

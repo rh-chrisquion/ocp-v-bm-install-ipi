@@ -16,7 +16,7 @@ locals {
     local.common_tags,
     {
       "managed-by" = "terraform"
-      "platform"   = "tt-rosa-hcp-hub"
+      "platform"   = "example-rosa-hcp-hub"
       "role"       = "central-management-hub"
     },
     var.tags

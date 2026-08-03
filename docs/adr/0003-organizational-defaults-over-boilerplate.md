@@ -34,7 +34,7 @@ this repo's — we only declare defaults for the concerns we own.
 Configuration resolves through layers, similar to CSS cascade. Each layer only
 needs to specify what differs from the layer below. Higher layers win.
 
-```
+```text
 Layer 4 — Per-cluster-per-app gate file   clusters/<cluster>/<app>.yaml
 Layer 3 — Profile overrides               profiles/teams/, profiles/cluster-types/,
                                            profiles/data-centers/
@@ -50,7 +50,7 @@ profile and a team profile) each contributing a subset of overrides.
 Defaults are declared in exactly one place per concern:
 
 | Concern | Org default location |
-|---|---|
+| --- | --- |
 | Argo CD Application fields | `sources/app-of-apps/applicationset.yaml` template |
 | AppProject RBAC structure | `sources/app-projects/chart/values.yaml` |
 | Team / cluster-type / data-center profiles | `profiles/` |

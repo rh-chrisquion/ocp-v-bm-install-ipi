@@ -1,3 +1,4 @@
+---
 ocp_agent_image_publish_enabled: false
 ocp_agent_image_source_dir: "{{ ocp_install_dir | default('./build') }}"
 ocp_agent_image_glob: "*.iso"

@@ -28,7 +28,8 @@ check_sources_entry_points() {
       continue
     fi
 
-    if rg -n --glob '*.yaml' --glob '*.yml' '^\s*apiVersion:' "${source_dir}" >/dev/null 2>&1; then
+    if find "${source_dir}" -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 \
+      | xargs -0 -r grep -lE '^[[:space:]]*apiVersion:' >/dev/null 2>&1; then
       continue
     fi
 
@@ -66,7 +67,7 @@ check_cluster_gates() {
         error "Gate file name is not RFC1123 compatible: ${filename}"
       fi
 
-      python3 - "${gate_file}" <<'PY'
+      if ! python3 - "${gate_file}" <<'PY'
 import sys
 import yaml
 
@@ -87,7 +88,7 @@ for index, doc in enumerate(docs):
         print(f"ERROR: {path} has unsupported top-level key(s): {joined}")
         sys.exit(2)
 PY
-      if [[ $? -ne 0 ]]; then
+      then
         failures=1
       fi
     done < <(find "${cluster_dir}" -maxdepth 1 -type f -name '*.yaml' | sort)

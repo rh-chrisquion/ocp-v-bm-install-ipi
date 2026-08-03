@@ -20,4 +20,4 @@ env                  = "sandbox"
 # VPC/subnet auto-discovery to find it. NOTE: as of this commit, that network
 # stack (and its VPC) has been destroyed -- plan/apply will fail with
 # "no matching EC2 VPC found" until it's re-applied.
-network_name = "tt-rosa-hcp-hub-network"
+network_name = "example-rosa-hcp-hub-network"

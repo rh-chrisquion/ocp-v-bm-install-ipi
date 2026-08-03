@@ -1,3 +1,4 @@
+---
 - name: Validate ACM/BMC connection details for each node
   ansible.builtin.assert:
     that:
@@ -96,7 +97,9 @@
     dest: "{{ ocp_output_dir }}/acm/agentclusterinstall.yaml"
     mode: "0640"
 
-- name: Generate day-0 integrity manifests ConfigMap referenced by AgentClusterInstall
+- name: >-
+    Generate day-0 integrity manifests ConfigMap referenced by
+    AgentClusterInstall
   ansible.builtin.template:
     src: acm/extra-manifests-configmap.yaml.j2
     dest: "{{ ocp_output_dir }}/acm/extra-manifests-configmap.yaml"
@@ -120,9 +123,15 @@
 - name: Show ACM bare-metal provisioning artifact locations
   ansible.builtin.debug:
     msg:
-      - "Generated ACM Central Infrastructure Management manifests in {{ ocp_output_dir }}/acm"
-      - "Apply the namespace first, then the rest of the manifests, against the ACM hub:"
+      - >-
+        Generated ACM Central Infrastructure Management manifests in
+        {{ ocp_output_dir }}/acm
+      - >-
+        Apply the namespace first, then the rest of the manifests, against the
+        ACM hub:
       - "  oc apply -f {{ ocp_output_dir }}/acm/namespace.yaml"
       - "  oc apply -f {{ ocp_output_dir }}/acm/"
       - "Track discovery/provisioning with:"
-      - "  oc get agent,baremetalhost,agentclusterinstall -n {{ ocp_acm_namespace }}"
+      - >-
+        oc get agent,baremetalhost,agentclusterinstall -n
+        {{ ocp_acm_namespace }}

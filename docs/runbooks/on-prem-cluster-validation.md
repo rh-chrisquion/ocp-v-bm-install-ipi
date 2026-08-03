@@ -109,7 +109,7 @@ oc adm top nodes
 ### Pass/fail criteria
 
 | Check | Pass threshold |
-|---|---|
+| --- | --- |
 | `etcdctl endpoint health` | All members healthy |
 | `etcd_disk_wal_fsync_duration_seconds` p99 | < 10ms |
 | `etcd_network_peer_round_trip_time_seconds` p99 | < 50ms (same-DC) |
@@ -244,7 +244,7 @@ oc delete pod iperf3-server iperf3-client -n default --ignore-not-found
 ### Pass/fail criteria
 
 | Check | Pass threshold |
-|---|---|
+| --- | --- |
 | Bond interface state during failure | Stays `UP`, one slave active |
 | Ping loss during failure | 0% (LACP failover is sub-second) |
 | Throughput during failure | > 0 (single-member bandwidth, not zero) |
@@ -338,7 +338,7 @@ oc delete vm validation-test-vm -n default
 ### Pass/fail criteria
 
 | Check | Pass threshold |
-|---|---|
+| --- | --- |
 | `VirtualMachineInstanceMigration` phase | `Succeeded` |
 | Ping loss during migration | 0-2 dropped packets |
 | `oc get vmi -o wide` `NODENAME` | Changed to a different node |
@@ -456,7 +456,7 @@ oc delete vm validation-test-vm -n default
 ### Pass/fail criteria
 
 | Check | Pass threshold |
-|---|---|
+| --- | --- |
 | Run 1 (no remediation) recovery time | ~5-6 min (default toleration) or never — documents the gap |
 | Run 2 (NHC/SNR active) recovery time | Single-digit minutes, deterministic |
 | VM data after failover | Intact (proves shared HPE-backed storage worked) |
@@ -466,7 +466,7 @@ oc delete vm validation-test-vm -n default
 ## Summary
 
 | # | Test | Depends on |
-|---|---|---|
+| --- | --- | --- |
 | 1 | etcd stability and latency | Cluster only |
 | 2 | Bonded-NIC port failure | Cluster only |
 | 3 | VM live migration | `sources/openshift-virtualization`, `sources/hpe-csi-driver` |

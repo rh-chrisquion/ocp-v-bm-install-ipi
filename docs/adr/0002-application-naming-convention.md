@@ -35,13 +35,13 @@ deployment model in use:
 
 - **Hub Argo CD** (one instance managing multiple destination clusters):
 
-  ```
+  ```text
   <clusterName>---<projectName>---<appName>
   ```
 
 - **Per-cluster Argo CD** (each cluster runs its own instance):
 
-  ```
+  ```text
   <projectName>---<appName>
   ```
 

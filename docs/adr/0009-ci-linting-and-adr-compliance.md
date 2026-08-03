@@ -22,7 +22,7 @@ human or AI judgment calls.
 ### Tooling
 
 | Concern | Tool | Config file |
-|---|---|---|
+| --- | --- | --- |
 | YAML syntax and style | yamllint | `.yamllint.yaml` |
 | Markdown style | markdownlint-cli2 | `.markdownlint.yaml` |
 | Shell scripts | shellcheck | inline (no config needed) |
@@ -77,7 +77,7 @@ for a platform repo that consumes many operators.
 The script at `.github/scripts/adr-compliance.sh` enforces:
 
 | Check | ADR | Mechanism |
-|---|---|---|
+| --- | --- | --- |
 | Gate file names are RFC 1123 compatible | 0002 | `[[ filename =~ ^[a-z0-9]... ]]` |
 | Production cluster dirs match `<dc>-<type>-<env>-<n>` | 0007 | regex + env segment validation |
 | Gate files contain only `metadata`/`spec` top-level keys | 0003 | python3 yaml.safe_load |
@@ -92,7 +92,7 @@ They should be reviewed periodically by an AI agent or a human platform reviewer
 (suggested cadence: quarterly or before major releases):
 
 | Concern | ADR | Why not automatable |
-|---|---|---|
+| --- | --- | --- |
 | Gate files only override what genuinely differs from org defaults | 0003 | Requires knowing *intent* — was the override deliberate or cargo-culted? |
 | AppProject assignments match team ownership | 0002, 0003 | Requires cross-referencing team roster (LDAP) against AppProject membership |
 | `targetRevision` overrides in gate files are intentional | 0006 | Hard-codes a branch/tag — correct for prod, suspicious in dev gate files |

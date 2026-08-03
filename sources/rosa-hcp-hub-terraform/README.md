@@ -80,8 +80,8 @@ all three values explicitly, matching the previous manual behavior.
 `rhcs_token` can be sourced from a repository secret instead of a local
 `terraform.tfvars` when running this stack from CI:
 
-- **Secret name:** `RHCS_TOKEN` (repository secret, not environment-scoped).
-  Set it with `gh secret set RHCS_TOKEN` or via
+- **Secret name:** `RHHC_ROSA_SVC_TOKEN` (repository secret, not environment-scoped).
+  Set it with `gh secret set RHHC_ROSA_SVC_TOKEN` or via
   **Settings > Secrets and variables > Actions** in GitHub.
 - **Workflow:** manually triggered (`workflow_dispatch`) only -- this never
   runs automatically on push/PR, consistent with this repo's stance of not
@@ -89,11 +89,11 @@ all three values explicitly, matching the previous manual behavior.
 - **Inputs:**
   - `action`: `plan` (default), `apply`, or `destroy`.
   - `rhcs_token_override`: optional, supplies a one-time token for that run
-    instead of the `RHCS_TOKEN` secret. **Caution:** unlike secrets,
+    instead of the `RHHC_ROSA_SVC_TOKEN` secret. **Caution:** unlike secrets,
     `workflow_dispatch` string inputs are visible to anyone with read access
     to the run (including in the "re-run workflow" UI) -- only use this for
     a token you're comfortable being visible that way, and prefer updating
-    the `RHCS_TOKEN` secret itself for anything longer-lived.
+    the `RHHC_ROSA_SVC_TOKEN` secret itself for anything longer-lived.
 - **AWS credentials:** selectable per run via the `aws_auth_method` input --
   Duo/Secrets Manager is one option, not a requirement. Pick whichever this
   AWS account actually supports:

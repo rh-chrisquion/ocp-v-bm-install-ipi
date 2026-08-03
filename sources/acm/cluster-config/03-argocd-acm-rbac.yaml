@@ -1,0 +1,27 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-acm-manifestwork-manager
+  labels:
+    argocd/aggregate-to-admin: "true"
+rules:
+  - apiGroups:
+      - work.open-cluster-management.io
+    resources:
+      - manifestworks
+    verbs:
+      - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-acm-manifestwork-binding
+subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops
+roleRef:
+  kind: ClusterRole
+  name: argocd-acm-manifestwork-manager
+  apiGroup: rbac.authorization.k8s.io

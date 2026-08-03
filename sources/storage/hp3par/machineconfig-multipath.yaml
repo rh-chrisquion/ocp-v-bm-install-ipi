@@ -1,0 +1,22 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-master-multipath
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,IyBNdWx0aXBhdGggY29uZmlndXJhdGlvbiBmb3IgSFBFIHN0b3JhZ2UgYXJyYXkKZGVmYXVsdHMgewogICAgdXNlcl9mcmllbmRseV9uYW1lcyB5ZXMKICAgIGZpbmRfbXVsdGlwYXRocyB5ZXMKfQoKIyBCbGFja2xpc3QgbG9jYWwgZGlza3MgYW5kIG5vbi1zdG9yYWdlIGRldmljZXMKYmxhY2tsaXN0IHsKICAgIGRldm5vZGUgIl5zZFthLXpdIgp9CgojIEhQRSAzcGFyIHN0b3JhZ2UgY29uZmlndXJhdGlvbgpkZXZpY2VzIHsKICAgIGRldmljZSB7CiAgICAgICAgdmVuZG9yICIzcFFSIgogICAgICAgIHByb2R1Y3QgIioiCiAgICAgICAgcGF0aF9ncm91cGluZ19wb2xpY3kgZ3JvdXBfYnlfcHJpbwogICAgICAgIHBhdGhfc2VsZWN0b3IgInNlcnZpY2UtdGltZSAwIgogICAgICAgIGhhcmR3YXJlX2hhbmRsZXIgIjEgYWx1YSIKICAgICAgICBwcmlvIDUwCiAgICAgICAgcnJfbWluX2lvIDEwMAogICAgICAgIGZhaWxiYWNrIGltbWVkaWF0ZQogICAgICAgIG5vX3BhdGhfcmV0cnkgcXVldWUKICAgIH0KfQo=
+        filesystem: root
+        mode: 0644
+        path: /etc/multipath.conf
+    systemd:
+      units:
+      - name: multipathd.service
+        enabled: true

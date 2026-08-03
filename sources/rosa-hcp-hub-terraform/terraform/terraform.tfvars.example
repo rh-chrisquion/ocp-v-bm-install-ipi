@@ -11,6 +11,13 @@ env = "sandbox"
 # AWS placement
 aws_region = "us-east-2"
 
+# Cross-account access (optional): if you're running this against a client's
+# AWS account via a role they granted you, rather than native credentials in
+# that account, set aws_assume_role_arn. Leave commented out to use ambient
+# credentials (CLI profile, SSO session, GitHub Actions creds) directly.
+# aws_assume_role_arn          = "arn:aws:iam::123456789012:role/ClientGrantedTerraformRole"
+# aws_assume_role_external_id  = "REPLACE_IF_REQUIRED_BY_TRUST_POLICY"
+
 # VPC/subnet/CIDR auto-discovery (default: enabled)
 # By default, aws_subnet_ids, aws_availability_zones, and machine_cidr are
 # auto-discovered from AWS by looking up a VPC tagged Name="${network_name}-vpc"

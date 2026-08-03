@@ -2,6 +2,13 @@
 aws_region   = "us-east-2"
 network_name = "example-rosa-hcp-hub-network"
 
+# Cross-account access (optional): if you're running this against a client's
+# AWS account via a role they granted you, rather than native credentials in
+# that account, set aws_assume_role_arn. Leave commented out to use ambient
+# credentials (CLI profile, SSO session, GitHub Actions creds) directly.
+# aws_assume_role_arn          = "arn:aws:iam::123456789012:role/ClientGrantedTerraformRole"
+# aws_assume_role_external_id  = "REPLACE_IF_REQUIRED_BY_TRUST_POLICY"
+
 # VPC machine supernet (must cover all worker subnets)
 vpc_cidr = "10.200.0.0/16"
 

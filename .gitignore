@@ -20,3 +20,11 @@ terraform.tfvars
 
 # JetBrains IDE
 **/.idea
+
+**/.DS_Store
+
+# OCP bare-metal bootstrap: generated day-0 artifacts and local secret material
+# (see sources/ocp-baremetal-bootstrap/README.md "End-to-end workflow")
+sources/ocp-baremetal-bootstrap/build/
+sources/ocp-baremetal-bootstrap/secrets/
+sources/ocp-baremetal-bootstrap/inventories/*/group_vars/*.local.yml

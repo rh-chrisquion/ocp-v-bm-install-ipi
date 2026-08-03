@@ -1,5 +1,17 @@
 provider "aws" {
   region = var.aws_region
+
+  # Cross-account access pattern: your base credentials (CLI profile, SSO
+  # session, GitHub Actions creds, etc.) assume a role the client granted in
+  # their own account, rather than using long-lived keys native to it.
+  dynamic "assume_role" {
+    for_each = var.aws_assume_role_arn != null ? [var.aws_assume_role_arn] : []
+    content {
+      role_arn     = assume_role.value
+      session_name = var.aws_assume_role_session_name
+      external_id  = var.aws_assume_role_external_id
+    }
+  }
 }
 
 provider "rhcs" {

@@ -25,6 +25,26 @@ variable "aws_region" {
   type        = string
 }
 
+variable "aws_assume_role_arn" {
+  description = "Optional IAM role ARN to assume for all AWS API calls in this account (e.g. a cross-account role a client grants a consultant). Leave null to use ambient AWS credentials (CLI profile, SSO session, GitHub Actions credentials, etc.) directly with no assume-role hop."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "aws_assume_role_external_id" {
+  description = "External ID required by aws_assume_role_arn's trust policy, if the role's trust policy requires one. Leave null if not required."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "aws_assume_role_session_name" {
+  description = "Session name used when assuming aws_assume_role_arn (visible in the client's CloudTrail for auditing)."
+  type        = string
+  default     = "terraform-rosa-hcp-hub"
+}
+
 variable "aws_subnet_ids" {
   description = "Private subnet IDs for worker placement. When empty and enable_vpc_discovery is true, these are auto-discovered from AWS."
   type        = list(string)

@@ -133,7 +133,7 @@ variable "compute_machine_type" {
 }
 
 variable "replicas" {
-  description = "Fixed worker replica count when autoscaling machine pools are not enabled."
+  description = "Fixed worker replica count for the default machine pool when autoscaling machine pools are not enabled. Must be a multiple of the private subnet count (HCP requirement). Ignored for sizing when enable_autoscaled_machine_pools is true (default pool is then sized to one worker per private subnet)."
   type        = number
   default     = 6
 }
@@ -282,4 +282,15 @@ variable "bastion_ami_id" {
   type        = string
   default     = null
   nullable    = true
+}
+
+# --- Day-1 OLM operators (GitOps + External Secrets) ---
+# Applied automatically at the end of terraform apply via oc. Subscriptions
+# start with installPlanApproval=Automatic so the first InstallPlan completes,
+# then the install script patches them to Manual.
+
+variable "install_day1_operators" {
+  description = "After the cluster is ready, install OpenShift GitOps and External Secrets Operator from manifests/ as part of terraform apply, then set their Subscriptions to installPlanApproval=Manual. Requires create_htpasswd_admin=true and API reachability from the Terraform runner (public API, VPN/TGW, or bastion SSM port-forward)."
+  type        = bool
+  default     = true
 }

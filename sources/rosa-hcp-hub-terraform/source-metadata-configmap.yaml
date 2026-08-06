@@ -6,5 +6,7 @@ metadata:
   namespace: openshift-gitops
 data:
   purpose: >-
-    Terraform source for ROSA HCP central management hub deployment
+    Terraform source for ROSA HCP central management hub deployment,
+    including day-1 OpenShift GitOps and External Secrets Operator install
   terraformRoot: "terraform"
+  day1Manifests: "manifests"

@@ -68,3 +68,8 @@ output "bastion_instance_id" {
   description = "EC2 instance ID of the SSM bastion host, when create_bastion is true. Use with: aws ssm start-session --target <this-value> ..."
   value       = try(aws_instance.bastion[0].id, null)
 }
+
+output "day1_operators_installed" {
+  description = "Whether this apply configured day-1 OLM operator installation (OpenShift GitOps + External Secrets). When true, Subscriptions are left at installPlanApproval=Manual after the initial CSV succeeds."
+  value       = var.install_day1_operators && var.create_htpasswd_admin
+}

@@ -82,3 +82,10 @@ tags = {
 # bastion host" in README.md for client-side connection steps.
 # create_bastion        = true
 # bastion_instance_type = "t3.micro"
+
+# --- Day-1 OLM operators (default: enabled) ---
+# terraform apply installs OpenShift GitOps + External Secrets Operator from
+# ../manifests/, waits for CSVs, then sets installPlanApproval=Manual.
+# Requires `oc` on PATH, create_htpasswd_admin=true, and API reachability
+# (for private_cluster=true: VPN/TGW or an active bastion SSM port-forward).
+# install_day1_operators = true

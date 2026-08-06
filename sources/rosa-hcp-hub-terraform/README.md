@@ -11,6 +11,8 @@ cluster that will host ACM, AAP, and optional Argo CD workloads.
 - Autoscaled machine pools with per-AZ min/max controls
 - Module-aligned implementation using `terraform-redhat/rosa-hcp/rhcs`
 - VPC/subnet/CIDR auto-discovery from AWS by tag (no manual output copying required by default)
+- Day-1 install of OpenShift GitOps and External Secrets Operator as part of
+  `terraform apply` (no separate operator install step)
 
 ## Terraform roots
 
@@ -66,6 +68,36 @@ that field, which is useful when the VPC isn't managed by the sibling network
 stack (for example, a VPC owned by a separate landing-zone team). Set
 `enable_vpc_discovery = false` to disable auto-discovery entirely and require
 all three values explicitly, matching the previous manual behavior.
+
+## Day-1 operators (GitOps + External Secrets)
+
+With `install_day1_operators = true` (default), the same `terraform apply` that
+creates the cluster also:
+
+1. Applies `manifests/openshift-gitops-operator.yaml` and
+   `manifests/external-secrets-operator.yaml` (Subscriptions use
+   `installPlanApproval: Automatic` so the first InstallPlan completes).
+2. Waits for each operator CSV to reach `Succeeded`.
+3. Patches both Subscriptions to `installPlanApproval: Manual` so later
+   upgrades require explicit approval.
+
+Requirements:
+
+- `oc` on the Terraform runner's `PATH`
+- `create_htpasswd_admin = true` (used for `oc login`)
+- API reachability from the Terraform runner — for `private_cluster = true`,
+  that means VPN/TGW into the VPC, or an active SSM port-forward via the
+  bastion (see below), before/during apply
+
+To skip operator install (for example a plan-only runner that cannot reach
+the API), set `install_day1_operators = false`.
+
+To re-run operator install after a failed apply (or after changing manifests),
+replace the tracker resource:
+
+```bash
+terraform apply -replace='terraform_data.day1_operators[0]'
+```
 
 ## Notes
 

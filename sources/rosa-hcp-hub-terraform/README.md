@@ -13,6 +13,8 @@ cluster that will host ACM, AAP, and optional Argo CD workloads.
 - VPC/subnet/CIDR auto-discovery from AWS by tag (no manual output copying required by default)
 - Day-1 install of OpenShift GitOps and External Secrets Operator as part of
   `terraform apply` (no separate operator install step)
+- Day-1 External Secrets IRSA role + `ClusterSecretStore` for AWS Secrets
+  Manager as part of the same apply
 
 ## Terraform roots
 
@@ -80,25 +82,45 @@ creates the cluster also:
 2. Waits for each operator CSV to reach `Succeeded`.
 3. Patches both Subscriptions to `installPlanApproval: Manual` so later
    upgrades require explicit approval.
+4. When `configure_eso_clustersecretstore = true` (default):
+   - Creates an IAM role trusted for IRSA against the cluster OIDC provider
+   - Applies `manifests/eso/external-secrets-config.yaml` (operand), including
+     NetworkPolicy egress TCP/443 so the controller can reach AWS STS and
+     Secrets Manager (Red Hat ESO defaults to deny-all egress otherwise)
+   - Annotates `ServiceAccount/external-secrets` with the role ARN and
+     restarts the ESO deployment
+   - Applies `ClusterSecretStore/aws-secrets-manager` for AWS Secrets Manager
+   - Waits until the store reports `Ready=True`
+5. Optionally (`eso_run_e2e_test = true`) creates a Secrets Manager test
+   secret and validates an `ExternalSecret` sync
 
 Requirements:
 
 - `oc` on the Terraform runner's `PATH`
 - `create_htpasswd_admin = true` (used for `oc login`)
+- `create_oidc = true` (required for ESO IRSA / ClusterSecretStore)
 - API reachability from the Terraform runner — for `private_cluster = true`,
   that means VPN/TGW into the VPC, or an active SSM port-forward via the
   bastion (see below), before/during apply
 
-To skip operator install (for example a plan-only runner that cannot reach
-the API), set `install_day1_operators = false`.
+To skip operator install (and therefore ESO ClusterSecretStore config), set
+`install_day1_operators = false`.
 
-To re-run operator install after a failed apply (or after changing manifests),
-replace the tracker resource:
+To install operators but skip ClusterSecretStore / IRSA wiring:
+
+```hcl
+configure_eso_clustersecretstore = false
+```
+
+To re-run operator + ESO config after a failed apply (or after changing
+manifests), replace the tracker resource:
 
 ```bash
 terraform apply -replace='terraform_data.day1_operators[0]'
 ```
 
+IAM / IRSA details for the ESO role are documented in
+`docs/eso-iam-setup-guide.md`.
 ## Notes
 
 - This configuration intentionally sets `cluster_autoscaler_enabled = false`

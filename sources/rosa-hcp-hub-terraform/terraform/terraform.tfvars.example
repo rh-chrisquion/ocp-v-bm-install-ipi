@@ -89,3 +89,12 @@ tags = {
 # Requires `oc` on PATH, create_htpasswd_admin=true, and API reachability
 # (for private_cluster=true: VPN/TGW or an active bastion SSM port-forward).
 # install_day1_operators = true
+
+# After ESO operator install, also create the IRSA IAM role, ExternalSecretsConfig
+# operand, annotate the external-secrets SA, and apply ClusterSecretStore
+# aws-secrets-manager (default: enabled with operators).
+# configure_eso_clustersecretstore = true
+
+# Optional e2e: create a Secrets Manager test secret and validate ExternalSecret
+# sync during apply (default: false).
+# eso_run_e2e_test = true

@@ -7,6 +7,9 @@ metadata:
 data:
   purpose: >-
     Terraform source for ROSA HCP central management hub deployment,
-    including day-1 OpenShift GitOps and External Secrets Operator install
+    including day-1 OpenShift GitOps and External Secrets Operator install,
+    ExternalSecretsConfig operand, IRSA IAM role, and ClusterSecretStore
+    for AWS Secrets Manager
   terraformRoot: "terraform"
   day1Manifests: "manifests"
+  esoManifests: "manifests/eso"

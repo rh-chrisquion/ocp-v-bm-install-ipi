@@ -294,3 +294,34 @@ variable "install_day1_operators" {
   type        = bool
   default     = true
 }
+
+variable "configure_eso_clustersecretstore" {
+  description = "After ESO operator install, create the IRSA IAM role, apply ExternalSecretsConfig, annotate the external-secrets ServiceAccount, and create the aws-secrets-manager ClusterSecretStore. Requires install_day1_operators=true and create_oidc=true."
+  type        = bool
+  default     = true
+}
+
+variable "eso_run_e2e_test" {
+  description = "When configure_eso_clustersecretstore is true, create a temporary Secrets Manager secret and validate an ExternalSecret sync during terraform apply. The test ExternalSecret/Secret are deleted on success; the AWS secret remains managed by Terraform until destroy."
+  type        = bool
+  default     = false
+}
+
+variable "eso_e2e_test_secret_name" {
+  description = "AWS Secrets Manager secret name used by the optional ESO e2e test."
+  type        = string
+  default     = "e2e-test/external-secrets"
+}
+
+variable "eso_e2e_test_secret_value" {
+  description = "Value stored in the optional ESO e2e Secrets Manager secret."
+  type        = string
+  default     = "e2e-test-value-success"
+  sensitive   = true
+}
+
+variable "eso_e2e_test_namespace" {
+  description = "Namespace where the optional ESO e2e ExternalSecret is created."
+  type        = string
+  default     = "default"
+}

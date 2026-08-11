@@ -12,6 +12,11 @@
 #   MANIFESTS_DIR    - directory containing operator YAML manifests
 #
 # Optional env (ESO ClusterSecretStore / IRSA):
+#   CONFIGURE_GITOPS_APPSET - "true" to register repo + apply operators appset
+#   GITOPS_MANIFESTS_DIR    - directory containing gitops bootstrap templates
+#   GITOPS_APP_OF_APPS_REPO_URL - git repo URL to register/use in appset
+#   GITOPS_APP_OF_APPS_REPO_REVISION - git revision for generator/source
+#   GITOPS_REPOSITORY_SECRET_NAME - Argo CD repository secret name
 #   ESO_IAM_ROLE_ARN       - IAM role ARN for IRSA (skips ESO config when unset)
 #   ESO_MANIFESTS_DIR      - directory with ExternalSecretsConfig + ClusterSecretStore
 #   AWS_REGION             - region written into ClusterSecretStore (default us-east-2)
@@ -30,6 +35,10 @@ set -euo pipefail
 : "${MANIFESTS_DIR:?MANIFESTS_DIR is required}"
 
 AWS_REGION="${AWS_REGION:-us-east-2}"
+CONFIGURE_GITOPS_APPSET="${CONFIGURE_GITOPS_APPSET:-false}"
+GITOPS_APP_OF_APPS_REPO_URL="${GITOPS_APP_OF_APPS_REPO_URL:-https://github.com/ravishar-rh/gitops-app-of-apps.git}"
+GITOPS_APP_OF_APPS_REPO_REVISION="${GITOPS_APP_OF_APPS_REPO_REVISION:-main}"
+GITOPS_REPOSITORY_SECRET_NAME="${GITOPS_REPOSITORY_SECRET_NAME:-repo-gitops-app-of-apps}"
 ESO_NAMESPACE="${ESO_NAMESPACE:-external-secrets}"
 ESO_SERVICE_ACCOUNT="${ESO_SERVICE_ACCOUNT:-external-secrets}"
 ESO_CLUSTER_SECRET_STORE="${ESO_CLUSTER_SECRET_STORE:-aws-secrets-manager}"
@@ -123,6 +132,51 @@ oc get subscription -n openshift-gitops-operator openshift-gitops-operator \
   -o jsonpath='{.metadata.name}{" installPlanApproval="}{.spec.installPlanApproval}{"\n"}'
 oc get subscription -n external-secrets-operator openshift-external-secrets-operator \
   -o jsonpath='{.metadata.name}{" installPlanApproval="}{.spec.installPlanApproval}{"\n"}'
+
+# --- OpenShift GitOps repository + operators ApplicationSet (optional) ---
+if [[ "${CONFIGURE_GITOPS_APPSET}" == "true" ]]; then
+  : "${GITOPS_MANIFESTS_DIR:?GITOPS_MANIFESTS_DIR is required when CONFIGURE_GITOPS_APPSET=true}"
+  if [[ ! -d "${GITOPS_MANIFESTS_DIR}" ]]; then
+    echo "error: GITOPS_MANIFESTS_DIR does not exist: ${GITOPS_MANIFESTS_DIR}" >&2
+    exit 1
+  fi
+
+  echo "==> Waiting for OpenShift GitOps namespace and ApplicationSet CRD"
+  for i in $(seq 1 60); do
+    if oc get ns openshift-gitops >/dev/null 2>&1 \
+      && oc get crd applicationsets.argoproj.io >/dev/null 2>&1; then
+      break
+    fi
+    sleep 5
+  done
+  if ! oc get ns openshift-gitops >/dev/null 2>&1 || ! oc get crd applicationsets.argoproj.io >/dev/null 2>&1; then
+    echo "error: openshift-gitops namespace or applicationsets.argoproj.io CRD not ready after wait" >&2
+    exit 1
+  fi
+
+  echo "==> Applying Argo CD repository secret and operators ApplicationSet"
+  export GITOPS_APP_OF_APPS_REPO_URL GITOPS_APP_OF_APPS_REPO_REVISION GITOPS_REPOSITORY_SECRET_NAME
+  if command -v envsubst >/dev/null 2>&1; then
+    envsubst '${GITOPS_APP_OF_APPS_REPO_URL} ${GITOPS_APP_OF_APPS_REPO_REVISION} ${GITOPS_REPOSITORY_SECRET_NAME}' \
+      < "${GITOPS_MANIFESTS_DIR}/repository-secret.yaml" | oc apply -f -
+    envsubst '${GITOPS_APP_OF_APPS_REPO_URL} ${GITOPS_APP_OF_APPS_REPO_REVISION} ${GITOPS_REPOSITORY_SECRET_NAME}' \
+      < "${GITOPS_MANIFESTS_DIR}/operators-applicationset.yaml" | oc apply -f -
+  else
+    sed -e "s#\${GITOPS_APP_OF_APPS_REPO_URL}#${GITOPS_APP_OF_APPS_REPO_URL}#g" \
+        -e "s#\${GITOPS_APP_OF_APPS_REPO_REVISION}#${GITOPS_APP_OF_APPS_REPO_REVISION}#g" \
+        -e "s#\${GITOPS_REPOSITORY_SECRET_NAME}#${GITOPS_REPOSITORY_SECRET_NAME}#g" \
+        "${GITOPS_MANIFESTS_DIR}/repository-secret.yaml" | oc apply -f -
+    sed -e "s#\${GITOPS_APP_OF_APPS_REPO_URL}#${GITOPS_APP_OF_APPS_REPO_URL}#g" \
+        -e "s#\${GITOPS_APP_OF_APPS_REPO_REVISION}#${GITOPS_APP_OF_APPS_REPO_REVISION}#g" \
+        -e "s#\${GITOPS_REPOSITORY_SECRET_NAME}#${GITOPS_REPOSITORY_SECRET_NAME}#g" \
+        "${GITOPS_MANIFESTS_DIR}/operators-applicationset.yaml" | oc apply -f -
+  fi
+
+  oc get secret -n openshift-gitops "${GITOPS_REPOSITORY_SECRET_NAME}" \
+    -o jsonpath='{.metadata.name}{" configured"}{"\n"}' 2>/dev/null || true
+  oc get applicationset -n openshift-gitops operators \
+    -o jsonpath='{.metadata.name}{" configured"}{"\n"}'
+fi
 
 # --- ESO operand + ClusterSecretStore (optional) ---
 

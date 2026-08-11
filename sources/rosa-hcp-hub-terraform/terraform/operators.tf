@@ -15,16 +15,27 @@ check "day1_operators_require_htpasswd_admin" {
   }
 }
 
+check "gitops_appset_requires_day1_operators" {
+  assert {
+    condition     = !var.configure_gitops_app_of_apps || var.install_day1_operators
+    error_message = "configure_gitops_app_of_apps=true requires install_day1_operators=true because the repository secret/ApplicationSet are applied by the day-1 install script."
+  }
+}
+
 locals {
-  day1_manifests_dir = "${path.module}/../manifests"
+  day1_manifests_dir        = "${path.module}/../manifests"
+  day1_gitops_manifests_dir = "${path.module}/../manifests/gitops"
   day1_operator_files = sort([
     for f in fileset(local.day1_manifests_dir, "*.yaml") : f
   ])
   day1_eso_files = sort([
     for f in fileset("${local.day1_manifests_dir}/eso", "*.yaml") : "eso/${f}"
   ])
+  day1_gitops_files = sort([
+    for f in fileset(local.day1_gitops_manifests_dir, "*.yaml") : "gitops/${f}"
+  ])
   day1_manifests_hash = sha256(join("", [
-    for f in concat(local.day1_operator_files, local.day1_eso_files) :
+    for f in concat(local.day1_operator_files, local.day1_eso_files, local.day1_gitops_files) :
     filesha256("${local.day1_manifests_dir}/${f}")
   ]))
 }
@@ -40,6 +51,10 @@ resource "terraform_data" "day1_operators" {
     module.rosa_hcp_hub.cluster_id,
     local.day1_manifests_hash,
     try(aws_iam_role.external_secrets[0].arn, ""),
+    var.configure_gitops_app_of_apps,
+    var.gitops_app_of_apps_repo_url,
+    var.gitops_app_of_apps_repo_revision,
+    var.gitops_repository_secret_name,
     var.configure_eso_clustersecretstore,
     var.eso_run_e2e_test,
     var.eso_e2e_test_secret_name,
@@ -58,20 +73,25 @@ resource "terraform_data" "day1_operators" {
     interpreter = ["/bin/bash", "-c"]
     command     = "${path.module}/scripts/install-day1-operators.sh"
     environment = {
-      CLUSTER_API_URL          = module.rosa_hcp_hub.cluster_api_url
-      OC_USERNAME              = var.htpasswd_admin_username
-      OC_PASSWORD              = one(random_password.htpasswd_admin[*].result)
-      MANIFESTS_DIR            = local.day1_manifests_dir
-      AWS_REGION               = var.aws_region
-      ESO_MANIFESTS_DIR        = local.eso_manifests_dir
-      ESO_IAM_ROLE_ARN         = var.configure_eso_clustersecretstore ? try(aws_iam_role.external_secrets[0].arn, "") : ""
-      ESO_NAMESPACE            = local.eso_namespace
-      ESO_SERVICE_ACCOUNT      = local.eso_service_account_name
-      ESO_CLUSTER_SECRET_STORE = local.eso_cluster_secret_store
-      ESO_RUN_E2E_TEST         = var.configure_eso_clustersecretstore && var.eso_run_e2e_test ? "true" : "false"
-      ESO_E2E_SECRET_NAME      = var.eso_e2e_test_secret_name
-      ESO_E2E_SECRET_VALUE     = var.eso_e2e_test_secret_value
-      ESO_E2E_NAMESPACE        = var.eso_e2e_test_namespace
+      CLUSTER_API_URL                  = module.rosa_hcp_hub.cluster_api_url
+      OC_USERNAME                      = var.htpasswd_admin_username
+      OC_PASSWORD                      = one(random_password.htpasswd_admin[*].result)
+      MANIFESTS_DIR                    = local.day1_manifests_dir
+      GITOPS_MANIFESTS_DIR             = local.day1_gitops_manifests_dir
+      CONFIGURE_GITOPS_APPSET          = var.configure_gitops_app_of_apps ? "true" : "false"
+      GITOPS_APP_OF_APPS_REPO_URL      = var.gitops_app_of_apps_repo_url
+      GITOPS_APP_OF_APPS_REPO_REVISION = var.gitops_app_of_apps_repo_revision
+      GITOPS_REPOSITORY_SECRET_NAME    = var.gitops_repository_secret_name
+      AWS_REGION                       = var.aws_region
+      ESO_MANIFESTS_DIR                = local.eso_manifests_dir
+      ESO_IAM_ROLE_ARN                 = var.configure_eso_clustersecretstore ? try(aws_iam_role.external_secrets[0].arn, "") : ""
+      ESO_NAMESPACE                    = local.eso_namespace
+      ESO_SERVICE_ACCOUNT              = local.eso_service_account_name
+      ESO_CLUSTER_SECRET_STORE         = local.eso_cluster_secret_store
+      ESO_RUN_E2E_TEST                 = var.configure_eso_clustersecretstore && var.eso_run_e2e_test ? "true" : "false"
+      ESO_E2E_SECRET_NAME              = var.eso_e2e_test_secret_name
+      ESO_E2E_SECRET_VALUE             = var.eso_e2e_test_secret_value
+      ESO_E2E_NAMESPACE                = var.eso_e2e_test_namespace
     }
   }
 }

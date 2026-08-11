@@ -295,6 +295,30 @@ variable "install_day1_operators" {
   default     = true
 }
 
+variable "configure_gitops_app_of_apps" {
+  description = "After OpenShift GitOps operator install, register the gitops-app-of-apps repository in Argo CD and apply the operators ApplicationSet from manifests/gitops/."
+  type        = bool
+  default     = true
+}
+
+variable "gitops_app_of_apps_repo_url" {
+  description = "Git repository URL used for the day-1 operators ApplicationSet generator/source."
+  type        = string
+  default     = "https://github.com/ravishar-rh/gitops-app-of-apps.git"
+}
+
+variable "gitops_app_of_apps_repo_revision" {
+  description = "Git revision used for the day-1 operators ApplicationSet generator/source."
+  type        = string
+  default     = "main"
+}
+
+variable "gitops_repository_secret_name" {
+  description = "Name of the Argo CD repository secret created in openshift-gitops for gitops_app_of_apps_repo_url."
+  type        = string
+  default     = "repo-gitops-app-of-apps"
+}
+
 variable "configure_eso_clustersecretstore" {
   description = "After ESO operator install, create the IRSA IAM role, apply ExternalSecretsConfig, annotate the external-secrets ServiceAccount, and create the aws-secrets-manager ClusterSecretStore. Requires install_day1_operators=true and create_oidc=true."
   type        = bool

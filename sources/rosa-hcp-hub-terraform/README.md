@@ -82,7 +82,13 @@ creates the cluster also:
 2. Waits for each operator CSV to reach `Succeeded`.
 3. Patches both Subscriptions to `installPlanApproval: Manual` so later
    upgrades require explicit approval.
-4. When `configure_eso_clustersecretstore = true` (default):
+4. When `configure_gitops_app_of_apps = true` (default):
+   - Creates/updates an Argo CD repository secret in `openshift-gitops` for
+     `gitops_app_of_apps_repo_url`
+   - Applies `manifests/gitops/operators-applicationset.yaml`, pointing the
+     generator/source to `gitops_app_of_apps_repo_url` and
+     `gitops_app_of_apps_repo_revision`
+5. When `configure_eso_clustersecretstore = true` (default):
    - Creates an IAM role trusted for IRSA against the cluster OIDC provider
    - Applies `manifests/eso/external-secrets-config.yaml` (operand), including
      NetworkPolicy egress TCP/443 so the controller can reach AWS STS and
@@ -91,7 +97,7 @@ creates the cluster also:
      restarts the ESO deployment
    - Applies `ClusterSecretStore/aws-secrets-manager` for AWS Secrets Manager
    - Waits until the store reports `Ready=True`
-5. Optionally (`eso_run_e2e_test = true`) creates a Secrets Manager test
+6. Optionally (`eso_run_e2e_test = true`) creates a Secrets Manager test
    secret and validates an `ExternalSecret` sync
 
 Requirements:
@@ -105,6 +111,12 @@ Requirements:
 
 To skip operator install (and therefore ESO ClusterSecretStore config), set
 `install_day1_operators = false`.
+
+To skip the GitOps app-of-apps repository/ApplicationSet bootstrap:
+
+```hcl
+configure_gitops_app_of_apps = false
+```
 
 To install operators but skip ClusterSecretStore / IRSA wiring:
 

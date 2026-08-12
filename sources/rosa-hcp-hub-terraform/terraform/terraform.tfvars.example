@@ -82,3 +82,26 @@ tags = {
 # bastion host" in README.md for client-side connection steps.
 # create_bastion        = true
 # bastion_instance_type = "t3.micro"
+
+# --- Day-1 OLM operators (default: enabled) ---
+# terraform apply installs OpenShift GitOps + External Secrets Operator from
+# ../manifests/, waits for CSVs, then sets installPlanApproval=Manual.
+# Requires `oc` on PATH, create_htpasswd_admin=true, and API reachability
+# (for private_cluster=true: VPN/TGW or an active bastion SSM port-forward).
+# install_day1_operators = true
+
+# After GitOps operator install, register the app-of-apps repository and apply
+# manifests/gitops/operators-applicationset.yaml (default: enabled).
+# configure_gitops_app_of_apps    = true
+# gitops_app_of_apps_repo_url     = "https://github.com/ravishar-rh/gitops-app-of-apps.git"
+# gitops_app_of_apps_repo_revision = "main"
+# gitops_repository_secret_name   = "repo-gitops-app-of-apps"
+
+# After ESO operator install, also create the IRSA IAM role, ExternalSecretsConfig
+# operand, annotate the external-secrets SA, and apply ClusterSecretStore
+# aws-secrets-manager (default: enabled with operators).
+# configure_eso_clustersecretstore = true
+
+# Optional e2e: create a Secrets Manager test secret and validate ExternalSecret
+# sync during apply (default: false).
+# eso_run_e2e_test = true

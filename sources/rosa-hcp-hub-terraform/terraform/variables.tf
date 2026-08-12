@@ -133,7 +133,7 @@ variable "compute_machine_type" {
 }
 
 variable "replicas" {
-  description = "Fixed worker replica count when autoscaling machine pools are not enabled."
+  description = "Fixed worker replica count for the default machine pool when autoscaling machine pools are not enabled. Must be a multiple of the private subnet count (HCP requirement). Ignored for sizing when enable_autoscaled_machine_pools is true (default pool is then sized to one worker per private subnet)."
   type        = number
   default     = 6
 }
@@ -282,4 +282,70 @@ variable "bastion_ami_id" {
   type        = string
   default     = null
   nullable    = true
+}
+
+# --- Day-1 OLM operators (GitOps + External Secrets) ---
+# Applied automatically at the end of terraform apply via oc. Subscriptions
+# start with installPlanApproval=Automatic so the first InstallPlan completes,
+# then the install script patches them to Manual.
+
+variable "install_day1_operators" {
+  description = "After the cluster is ready, install OpenShift GitOps and External Secrets Operator from manifests/ as part of terraform apply, then set their Subscriptions to installPlanApproval=Manual. Requires create_htpasswd_admin=true and API reachability from the Terraform runner (public API, VPN/TGW, or bastion SSM port-forward)."
+  type        = bool
+  default     = true
+}
+
+variable "configure_gitops_app_of_apps" {
+  description = "After OpenShift GitOps operator install, register the gitops-app-of-apps repository in Argo CD and apply the operators ApplicationSet from manifests/gitops/."
+  type        = bool
+  default     = true
+}
+
+variable "gitops_app_of_apps_repo_url" {
+  description = "Git repository URL used for the day-1 operators ApplicationSet generator/source."
+  type        = string
+  default     = "https://github.com/ravishar-rh/gitops-app-of-apps.git"
+}
+
+variable "gitops_app_of_apps_repo_revision" {
+  description = "Git revision used for the day-1 operators ApplicationSet generator/source."
+  type        = string
+  default     = "main"
+}
+
+variable "gitops_repository_secret_name" {
+  description = "Name of the Argo CD repository secret created in openshift-gitops for gitops_app_of_apps_repo_url."
+  type        = string
+  default     = "repo-gitops-app-of-apps"
+}
+
+variable "configure_eso_clustersecretstore" {
+  description = "After ESO operator install, create the IRSA IAM role, apply ExternalSecretsConfig, annotate the external-secrets ServiceAccount, and create the aws-secrets-manager ClusterSecretStore. Requires install_day1_operators=true and create_oidc=true."
+  type        = bool
+  default     = true
+}
+
+variable "eso_run_e2e_test" {
+  description = "When configure_eso_clustersecretstore is true, create a temporary Secrets Manager secret and validate an ExternalSecret sync during terraform apply. The test ExternalSecret/Secret are deleted on success; the AWS secret remains managed by Terraform until destroy."
+  type        = bool
+  default     = false
+}
+
+variable "eso_e2e_test_secret_name" {
+  description = "AWS Secrets Manager secret name used by the optional ESO e2e test."
+  type        = string
+  default     = "e2e-test/external-secrets"
+}
+
+variable "eso_e2e_test_secret_value" {
+  description = "Value stored in the optional ESO e2e Secrets Manager secret."
+  type        = string
+  default     = "e2e-test-value-success"
+  sensitive   = true
+}
+
+variable "eso_e2e_test_namespace" {
+  description = "Namespace where the optional ESO e2e ExternalSecret is created."
+  type        = string
+  default     = "default"
 }

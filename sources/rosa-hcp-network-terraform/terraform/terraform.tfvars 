@@ -1,0 +1,69 @@
+# Region and naming
+aws_region   = "us-east-2"
+network_name = "example-rosa-hcp-hub-network"
+
+# Cross-account access (optional): if you're running this against a client's
+# AWS account via a role they granted you, rather than native credentials in
+# that account, set aws_assume_role_arn. Leave commented out to use ambient
+# credentials (CLI profile, SSO session, GitHub Actions creds) directly.
+# aws_assume_role_arn          = "arn:aws:iam::123456789012:role/ClientGrantedTerraformRole"
+# aws_assume_role_external_id  = "REPLACE_IF_REQUIRED_BY_TRUST_POLICY"
+
+# VPC machine supernet (must cover all worker subnets)
+vpc_cidr = "10.200.0.0/16"
+
+# Use exactly one private and one public subnet per AZ
+availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
+private_subnet_cidrs = [
+  "10.200.0.0/20",
+  "10.200.16.0/20",
+  "10.200.32.0/20"
+]
+public_subnet_cidrs = [
+  "10.200.240.0/24",
+  "10.200.241.0/24",
+  "10.200.242.0/24"
+]
+
+# Enterprise HA: one NAT gateway per AZ
+enable_single_nat_gateway = false
+
+# VPC endpoints reduce NAT egress and keep AWS API traffic private
+create_vpc_endpoints = true
+interface_vpc_endpoint_services = [
+  "sts",
+  "ecr.api",
+  "ecr.dkr",
+  "ec2",
+  "elasticloadbalancing",
+  "logs",
+  "monitoring"
+]
+create_s3_gateway_endpoint = true
+
+# Optional on-prem private route targets (choose TGW or VGW, not both)
+# create_onprem_private_routes = true
+# onprem_route_cidrs = [
+#   "10.20.10.0/24",
+#   "10.30.10.0/24",
+#   "10.40.10.0/24"
+# ]
+# onprem_transit_gateway_id = "tgw-0123456789abcdef0"
+# onprem_vpn_gateway_id     = null
+# onprem_route_table_ids_override = []
+
+# Optional hybrid DNS: lets on-prem hosts (e.g. an on-prem bastion) resolve
+# the private cluster's API/console hostnames once the routes above give
+# them an IP path in. See "Optional on-prem DNS resolution" in README.md.
+# create_onprem_dns_resolver = true
+# onprem_dns_cidrs = [
+#   "10.20.10.0/24",
+#   "10.30.10.0/24",
+#   "10.40.10.0/24"
+# ]
+
+tags = {
+  environment = "hub"
+  owner       = "platform-team"
+  managed_by  = "terraform"
+}

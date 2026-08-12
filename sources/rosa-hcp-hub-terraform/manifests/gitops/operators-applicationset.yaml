@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: operators
+  namespace: openshift-gitops
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: ${GITOPS_APP_OF_APPS_REPO_URL}
+        revision: ${GITOPS_APP_OF_APPS_REPO_REVISION}
+        directories:
+          - path: operator-manifests/*
+  template:
+    metadata:
+      name: "{{ .path.basename }}"
+      namespace: openshift-gitops
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: ${GITOPS_APP_OF_APPS_REPO_URL}
+        targetRevision: ${GITOPS_APP_OF_APPS_REPO_REVISION}
+        path: "{{ .path.path }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .path.basename }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - SkipDryRunOnMissingResource=true
+        retry:
+          limit: 30
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 5m

@@ -11,6 +11,10 @@ cluster that will host ACM, AAP, and optional Argo CD workloads.
 - Autoscaled machine pools with per-AZ min/max controls
 - Module-aligned implementation using `terraform-redhat/rosa-hcp/rhcs`
 - VPC/subnet/CIDR auto-discovery from AWS by tag (no manual output copying required by default)
+- Day-1 install of OpenShift GitOps and External Secrets Operator as part of
+  `terraform apply` (no separate operator install step)
+- Day-1 External Secrets IRSA role + `ClusterSecretStore` for AWS Secrets
+  Manager as part of the same apply
 
 ## Terraform roots
 
@@ -67,6 +71,68 @@ stack (for example, a VPC owned by a separate landing-zone team). Set
 `enable_vpc_discovery = false` to disable auto-discovery entirely and require
 all three values explicitly, matching the previous manual behavior.
 
+## Day-1 operators (GitOps + External Secrets)
+
+With `install_day1_operators = true` (default), the same `terraform apply` that
+creates the cluster also:
+
+1. Applies `manifests/openshift-gitops-operator.yaml` and
+   `manifests/external-secrets-operator.yaml` (Subscriptions use
+   `installPlanApproval: Automatic` so the first InstallPlan completes).
+2. Waits for each operator CSV to reach `Succeeded`.
+3. Patches both Subscriptions to `installPlanApproval: Manual` so later
+   upgrades require explicit approval.
+4. When `configure_gitops_app_of_apps = true` (default):
+   - Creates/updates an Argo CD repository secret in `openshift-gitops` for
+     `gitops_app_of_apps_repo_url`
+   - Applies `manifests/gitops/operators-applicationset.yaml`, pointing the
+     generator/source to `gitops_app_of_apps_repo_url` and
+     `gitops_app_of_apps_repo_revision`
+5. When `configure_eso_clustersecretstore = true` (default):
+   - Creates an IAM role trusted for IRSA against the cluster OIDC provider
+   - Applies `manifests/eso/external-secrets-config.yaml` (operand), including
+     NetworkPolicy egress TCP/443 so the controller can reach AWS STS and
+     Secrets Manager (Red Hat ESO defaults to deny-all egress otherwise)
+   - Annotates `ServiceAccount/external-secrets` with the role ARN and
+     restarts the ESO deployment
+   - Applies `ClusterSecretStore/aws-secrets-manager` for AWS Secrets Manager
+   - Waits until the store reports `Ready=True`
+6. Optionally (`eso_run_e2e_test = true`) creates a Secrets Manager test
+   secret and validates an `ExternalSecret` sync
+
+Requirements:
+
+- `oc` on the Terraform runner's `PATH`
+- `create_htpasswd_admin = true` (used for `oc login`)
+- `create_oidc = true` (required for ESO IRSA / ClusterSecretStore)
+- API reachability from the Terraform runner — for `private_cluster = true`,
+  that means VPN/TGW into the VPC, or an active SSM port-forward via the
+  bastion (see below), before/during apply
+
+To skip operator install (and therefore ESO ClusterSecretStore config), set
+`install_day1_operators = false`.
+
+To skip the GitOps app-of-apps repository/ApplicationSet bootstrap:
+
+```hcl
+configure_gitops_app_of_apps = false
+```
+
+To install operators but skip ClusterSecretStore / IRSA wiring:
+
+```hcl
+configure_eso_clustersecretstore = false
+```
+
+To re-run operator + ESO config after a failed apply (or after changing
+manifests), replace the tracker resource:
+
+```bash
+terraform apply -replace='terraform_data.day1_operators[0]'
+```
+
+IAM / IRSA details for the ESO role are documented in
+`docs/eso-iam-setup-guide.md`.
 ## Notes
 
 - This configuration intentionally sets `cluster_autoscaler_enabled = false`

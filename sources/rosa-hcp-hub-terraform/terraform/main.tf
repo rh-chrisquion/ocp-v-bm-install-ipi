@@ -118,6 +118,17 @@ check "public_cluster_subnet_requirement" {
   }
 }
 
+check "replicas_multiple_of_private_subnets" {
+  assert {
+    condition = (
+      length(local.effective_private_subnet_ids) == 0 ||
+      var.enable_autoscaled_machine_pools ||
+      var.replicas % length(local.effective_private_subnet_ids) == 0
+    )
+    error_message = "replicas (${var.replicas}) must be a multiple of the private subnet count (${length(local.effective_private_subnet_ids)}). For 3 private subnets use 3, 6, 9, ..."
+  }
+}
+
 data "aws_vpc" "selected" {
   count = local.use_discovery ? 1 : 0
 
@@ -172,7 +183,13 @@ module "rosa_hcp_hub" {
   operator_role_prefix  = var.operator_role_prefix
 
   compute_machine_type = var.compute_machine_type
-  replicas             = var.enable_autoscaled_machine_pools ? null : var.replicas
+  # Default worker pool always needs an explicit replica count. Leaving it
+  # null makes the RHCS provider default to 2, which fails HCP validation
+  # when there are 3 private subnets (replicas must be a multiple of the
+  # private subnet count). With autoscaled per-subnet pools enabled, size
+  # the default pool to one worker per private subnet; otherwise use
+  # var.replicas (also validated as a multiple below).
+  replicas = var.enable_autoscaled_machine_pools ? length(local.effective_private_subnet_ids) : var.replicas
 
   machine_pools = local.effective_machine_pools
 

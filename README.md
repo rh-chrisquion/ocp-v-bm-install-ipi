@@ -168,7 +168,13 @@ terraform apply
 ```
 
 Cluster creation (ROSA HCP control plane + worker machine pools) typically
-takes 15-25 minutes.
+takes 15-25 minutes. With the default `install_day1_operators = true`, the
+same apply then installs OpenShift GitOps and External Secrets Operator,
+sets their Subscriptions to `installPlanApproval: Manual`, and (with
+`configure_eso_clustersecretstore = true`) creates the IRSA role plus
+`ClusterSecretStore/aws-secrets-manager`. That step needs `oc` on `PATH`
+and API reachability from the Terraform runner (see
+`sources/rosa-hcp-hub-terraform/README.md`).
 
 ### 5. Access the cluster
 

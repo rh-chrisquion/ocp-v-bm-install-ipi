@@ -34,21 +34,27 @@ Reference: [HPE Storage Container Orchestrator Documentation — Red Hat OpenShi
    ```
 
 2. **Create the backend Secret and StorageClass.** These depend on the exact
-   HPE array model serving `ocpv420` and must never be committed to git. See
+   HPE array model serving the cluster and must never be committed to git. See
    [`storageclass.example.yaml`](storageclass.example.yaml) for the
    activation steps.
 
-3. **NVMe/iSCSI host identity fix (if applicable).** On some node images, the
+3. **iSCSI and multipath services (if applicable).** Review
+   [`machineconfig-storage-services.example.yaml`](machineconfig-storage-services.example.yaml)
+   before adding it to the kustomization. Applying a MachineConfig drains and
+   reboots affected nodes. The example creates a missing initiator IQN and
+   enables `iscsid`, `iscsi`, and `multipathd`.
+
+4. **NVMe host identity fix (if applicable).** On some node images, the
    CSI node driver fails to start with a "duplicate NQN" error. If that
    occurs, apply the `MachineConfig` documented at
    [Duplicate NQNs issue](https://scod.hpedev.io/csi_driver/partners/redhat_openshift/index.html#duplicate-nqns-issue)
-   (use the "converged cluster" / `master` role variant for `ocpv420`, since
-   all 5 nodes are combined control-plane/worker).
+   Use the `master` role variant for a compact cluster whose nodes combine
+   control-plane and worker roles.
 
 ## OpenShift Virtualization interop note
 
 If VM disks are cloned from the `openshift-virtualization-os-images`
-namespace and need to support live migration, confirm the `hpe-standard`
-`StorageProfile` reports `ReadWriteMany` (`oc get storageprofile hpe-standard
+namespace and need to support live migration, confirm the selected
+`StorageProfile` reports `ReadWriteMany` (`oc get storageprofile <class-name>
 -o yaml`) — recent OpenShift EUS releases default this correctly, but older
 ones may need a manual patch. See the SCOD page linked above for details.

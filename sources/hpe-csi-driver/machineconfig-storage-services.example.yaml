@@ -1,0 +1,42 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 99-master-storage-services
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 3.4.0
+    systemd:
+      units:
+        # Preserve an existing identity and generate a unique IQN only when a
+        # newly installed node does not yet have one.
+        - name: initialize-iscsi-initiator.service
+          enabled: true
+          contents: |
+            [Unit]
+            Description=Initialize missing iSCSI initiator identity
+            Before=iscsid.service iscsi.service
+            ConditionPathExists=!/etc/iscsi/initiatorname.iscsi
+
+            [Service]
+            Type=oneshot
+            UMask=0077
+            ExecStart=/bin/bash -ec 'install -d -m 0755 /etc/iscsi; iqn=$$(iscsi-iname); test -n "$$iqn"; printf "InitiatorName=%%s\n" "$$iqn" > /etc/iscsi/initiatorname.iscsi'
+            RemainAfterExit=yes
+
+            [Install]
+            WantedBy=multi-user.target
+        - name: iscsid.service
+          enabled: true
+          dropins:
+            - name: 10-initiator.conf
+              contents: |
+                [Unit]
+                Requires=initialize-iscsi-initiator.service
+                After=initialize-iscsi-initiator.service
+        - name: iscsi.service
+          enabled: true
+        - name: multipathd.service
+          enabled: true

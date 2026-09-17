@@ -1,0 +1,35 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 06-master-disable-nested-virtualization
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 3.4.0
+    storage:
+      files:
+        - path: /etc/modprobe.d/disable-nested-virtualization.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:text/plain;charset=utf-8;base64,IyBEaXNhYmxlIG5lc3RlZCB2aXJ0dWFsaXphdGlvbiBmb3IgS1ZNIGd1ZXN0cy4Kb3B0aW9ucyBrdm1faW50ZWwgbmVzdGVkPTAKb3B0aW9ucyBrdm1fYW1kIG5lc3RlZD0wCg==
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 06-worker-disable-nested-virtualization
+  labels:
+    machineconfiguration.openshift.io/role: worker
+spec:
+  config:
+    ignition:
+      version: 3.4.0
+    storage:
+      files:
+        - path: /etc/modprobe.d/disable-nested-virtualization.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:text/plain;charset=utf-8;base64,IyBEaXNhYmxlIG5lc3RlZCB2aXJ0dWFsaXphdGlvbiBmb3IgS1ZNIGd1ZXN0cy4Kb3B0aW9ucyBrdm1faW50ZWwgbmVzdGVkPTAKb3B0aW9ucyBrdm1fYW1kIG5lc3RlZD0wCg==

@@ -1,0 +1,60 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: example-vm-traffic-bridge
+spec:
+  maxUnavailable: 1
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  desiredState:
+    interfaces:
+      - name: vm-port-a
+        type: ethernet
+        state: up
+        mtu: 9000
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
+      - name: vm-port-b
+        type: ethernet
+        state: up
+        mtu: 9000
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
+      - name: bond-vm
+        type: bond
+        state: up
+        mtu: 9000
+        link-aggregation:
+          mode: 802.3ad
+          options:
+            lacp_rate: fast
+            miimon: "100"
+            xmit_hash_policy: layer3+4
+          port:
+            - vm-port-a
+            - vm-port-b
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
+      - name: br-vm-traffic
+        type: ovs-bridge
+        state: up
+        mtu: 9000
+        bridge:
+          allow-extra-patch-ports: true
+          port:
+            - name: bond-vm
+            - name: br-vm-traffic
+      - name: br-vm-traffic
+        type: ovs-interface
+        state: up
+        mtu: 9000
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
